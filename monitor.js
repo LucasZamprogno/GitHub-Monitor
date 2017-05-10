@@ -4,10 +4,23 @@ console.log("~~~~~~ EVERYTHING LOADED FINE ~~~~~~~");
 var pastElem = null; // store the currently selected element
 var origBorder = ""; // stores the border settings of the selected element
 var lastTarget = null;
+var lastX = 0;
+var lastY = 0;
+var targets = {
+	"div.file": "Special case, won't see this",
+	"div#all_commit_comments": "Comment section"
+};
 
 document.body.addEventListener("mousemove", function(event){
-    var posX = event.clientX, posY = event.clientY;
-    var currentElem = document.elementFromPoint(posX, posY);
+    lastX = event.clientX;
+    lastY = event.clientY;
+    //poll(lastX, lastY);
+});
+
+setInterval(function() { poll(lastX, lastY) }, 17); // 16.66... is 60hz, so this is just below.
+
+function poll(x, y) {
+	var currentElem = document.elementFromPoint(x, y);
 
     if (pastElem) {  // if there was previously selected element
         if (pastElem == currentElem) {  // if mouse is over the previously selected element
@@ -23,12 +36,7 @@ document.body.addEventListener("mousemove", function(event){
         //currentElem.style.border = "2px solid red";    // draws selection border
         checkForTarget(currentElem);
     }
-});
-
-var targets = {
-	"div.file": "Special case, won't see this",
-	"div#all_commit_comments": "Comment section"
-};
+}
 
 function checkForTarget(viewed) {
 	// Check each target key to see if currently viewed element is a child of it
