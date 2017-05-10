@@ -1,5 +1,3 @@
-console.log("~~~~~~ EVERYTHING LOADED FINE ~~~~~~~");
-
 // Codeblock slightly adapted from http://help.dottoro.com/ljctoqhf.php
 var pastElem = null; // store the currently selected element
 var origBorder = ""; // stores the border settings of the selected element
@@ -72,3 +70,5 @@ function getTargetDescription(key, elem) {
 			return targets[key];
 	}
 }
+
+console.log("~~~~~~ EVERYTHING LOADED FINE ~~~~~~~");
