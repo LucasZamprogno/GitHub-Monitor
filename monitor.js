@@ -23,6 +23,7 @@ function calibrate(event) {
     document.body.removeEventListener("mousemove", calibrate);
 }
 
+// Once server responds to echo, set global flag and stop checking
 function confirmServerAwake(self) {
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function(event) {
@@ -37,6 +38,7 @@ function confirmServerAwake(self) {
 	xhr.send();
 }
 
+// Once global offsets and serverAwake flags are ready, start requesting coordinates, stop attempting startup
 function startupMain(self) {
 	if(serverAwake && xOffset !== null && yOffset !== null) { // Need to specify null in case of 0 offset
 		setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
@@ -44,7 +46,7 @@ function startupMain(self) {
 	    document.body.addEventListener("mousemove", function(event){
 		    postDataToServer(event.clientX, event.clientY);
 		});
-	    console.log("Now listening");
+	    console.log("Requesting coordinates");
 		clearInterval(self);
 	}
 }
