@@ -4,7 +4,7 @@
   "version_name": "Proof of concept",
   "manifest_version": 2,
   "description": "Monitors user interaction in GitHub code review",
-  "permissions": ["*://github.com/*"],
+  "permissions": ["*://github.com/*", "https://localhost/*"],
   "icons": {"16": "icon16.bmp",
             "48": "icon48.bmp",
             "128": "icon128.bmp"},

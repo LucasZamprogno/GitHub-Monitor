@@ -2,22 +2,18 @@
 var pastElem = null; // store the currently selected element
 var origBorder = ""; // stores the border settings of the selected element
 var lastTarget = null;
-var lastX = 0;
-var lastY = 0;
 var targets = {
 	"div.file": "Special case, won't see this",
 	"div#all_commit_comments": "Comment section"
 };
 
 document.body.addEventListener("mousemove", function(event){
-    lastX = event.clientX;
-    lastY = event.clientY;
-    //poll(lastX, lastY);
+    postDataToServer(event.clientX, event.clientY);
 });
 
-setInterval(function() { poll(lastX, lastY) }, 17); // 16.66... is 60hz, so this is just below.
+setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
 
-function poll(x, y) {
+function getViewedElement(x, y) {
 	var currentElem = document.elementFromPoint(x, y);
 
     if (pastElem) {  // if there was previously selected element
@@ -33,6 +29,7 @@ function poll(x, y) {
         origBorder = currentElem.style.border; // stores the border settings of the selected element
         //currentElem.style.border = "2px solid red";    // draws selection border
         checkForTarget(currentElem);
+        //getNewCoordFromServer();
     }
 }
 
@@ -70,5 +67,27 @@ function getTargetDescription(key, elem) {
 			return targets[key];
 	}
 }
+
+function getNewCoordFromServer() {
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function(event) {
+		if (xhr.readyState == 4 && xhr.status == 200) {
+	        var response = JSON.parse(xhr.responseText);
+	        getViewedElement(response.x, response.y);
+	    }
+	};
+	xhr.open('GET', "https://localhost:4321/coordinate", true);
+	xhr.send();
+}
+
+
+// Will not be how things actually work
+function postDataToServer(xPos, yPos) {
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.open("POST", "https://localhost:4321/coordinate");
+	xmlhttp.setRequestHeader("Content-Type", "application/json");
+	xmlhttp.send(JSON.stringify({x:xPos, y:yPos}));
+}
+
 
 console.log("~~~~~~ EVERYTHING LOADED FINE ~~~~~~~");
