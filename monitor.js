@@ -16,20 +16,20 @@ setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so
 function getViewedElement(x, y) {
 	var currentElem = document.elementFromPoint(x, y);
 
-    if (pastElem) {  // if there was previously selected element
-        if (pastElem == currentElem) {  // if mouse is over the previously selected element
-            return; // does not need to update the selection border
+	// This comparison is only useful for the highlighting, will be removed eventually
+    if (pastElem) {
+        if (pastElem == currentElem) {
+            return;
         }
-        pastElem.style.border = origBorder;  // set border to the stored value
+        pastElem.style.border = origBorder;
         pastElem = null;
     }
-        // the body and the html tag won't be selected
+    
     if (currentElem && currentElem.tagName.toLowerCase() != "body" && currentElem.tagName.toLowerCase() != "html") {
-        pastElem = currentElem; // stores the selected element
-        origBorder = currentElem.style.border; // stores the border settings of the selected element
-        //currentElem.style.border = "2px solid red";    // draws selection border
+        pastElem = currentElem;
+        origBorder = currentElem.style.border;
+        //currentElem.style.border = "2px solid red"; // draws selection border
         checkForTarget(currentElem);
-        //getNewCoordFromServer();
     }
 }
 
@@ -40,7 +40,7 @@ function checkForTarget(viewed) {
 	var targettedElement = null;
 
 	for(var identifier of Object.keys(targets)) {
-		var found = $(identifier).has(viewed);
+		var found = $(viewed).closest(identifier);
 		// If the viewed element has a target parent
 		if(found.length) {
 			targettedIdentifier = identifier;
@@ -48,10 +48,14 @@ function checkForTarget(viewed) {
 			break;
 		}
 	}
-
-	// If the viewed target has changed, print it
-	if(lastTarget !== targettedIdentifier) {
-		lastTarget = targettedIdentifier;
+	
+	if(lastTarget && targettedElement) { // Both are targets
+		if(!(lastTarget.is(targettedElement))) { // New target, report change (eventually a different function probably)
+			lastTarget = targettedElement;
+			console.log(getTargetDescription(targettedIdentifier, targettedElement));
+		} 
+	} else if (lastTarget || targettedElement) { // Only is a target, definite change
+		lastTarget = targettedElement;
 		console.log(getTargetDescription(targettedIdentifier, targettedElement));
 	}
 };
@@ -68,6 +72,7 @@ function getTargetDescription(key, elem) {
 	}
 }
 
+// GET request, current gets x and y coordinate. Will include more details (e.g. timestamp) in the future
 function getNewCoordFromServer() {
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function(event) {
@@ -88,6 +93,3 @@ function postDataToServer(xPos, yPos) {
 	xmlhttp.setRequestHeader("Content-Type", "application/json");
 	xmlhttp.send(JSON.stringify({x:xPos, y:yPos}));
 }
-
-
-console.log("~~~~~~ EVERYTHING LOADED FINE ~~~~~~~");
