@@ -120,11 +120,13 @@ function getTargetDescription(key, elem) {
 // Mainly for cleanliness. Type refers to gaze vs click etc. Will add more fields as time goes on
 function makeInteractionObject(type, target, start, end) {
 	var obj = {};
-	obj['Type'] = type;
-	obj['Target'] = target;
-	obj['Start'] = start;
-	obj['End'] = end;
-	obj['Duration'] = end - start;
+	obj['interactionType'] = type;
+	obj['interactionTarget'] = target;
+	obj['interactionStart'] = start;
+	obj['interactionEnd'] = end;
+	obj['interactionDuration'] = end - start;
+	obj['pageTitle'] = document.title;
+	obj['pageHref'] = window.location.href;
 	return obj;
 }
 
@@ -160,15 +162,17 @@ function confirmServerAwake(self) {
 
 // GET request, current gets x and y coordinate. Will include more details (e.g. timestamp) in the future
 function getNewCoordFromServer() {
-	var xhr = new XMLHttpRequest();
-	xhr.onreadystatechange = function(event) {
-		if (xhr.readyState == 4 && xhr.status == 200) {
-	        var response = JSON.parse(xhr.responseText);
-	        checkForTargetChange(response.x, response.y);
-	    }
-	};
-	xhr.open('GET', "https://localhost:4321/coordinate", true);
-	xhr.send();
+	if(!document.hidden) {
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function(event) {
+			if (xhr.readyState == 4 && xhr.status == 200) {
+		        var response = JSON.parse(xhr.responseText);
+		        checkForTargetChange(response.x, response.y);
+		    }
+		};
+		xhr.open('GET', "https://localhost:4321/coordinate", true);
+		xhr.send();
+	}
 }
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
