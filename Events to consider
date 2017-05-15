@@ -1,0 +1,14 @@
+https://developer.mozilla.org/en-US/docs/Web/Events
+change
+click
+contextmenu
+copy/cut/paste
+drag (many variants)
+input
+keypress
+mouse(out/over/move)
+resize (need to recalibrate potentially)
+scroll
+select
+show (more specific version of contextmenu)
+visibilitychange
