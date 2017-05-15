@@ -1,6 +1,10 @@
 var origBorder = ""; // stores the border settings of the selected element
-var xOffset = null; // Difference between document x and screen pixel x
-var yOffset = null; // Difference between document y and screen pixel y
+var windowXOffset = window.screenX; // Window distance from screen 0
+var windowYOffset = window.screenY; // Window distance from screen 0
+var totalXOffset = null; // Difference between document x and screen pixel x
+var totalYOffset = null; // Difference between document y and screen pixel y
+var browserXOffset = null; 
+var browserYOffset = null;
 var serverAwake = false;
 
 var targets = { // Keys are target elements, values are descriptors
@@ -15,16 +19,36 @@ var gazeStart = null;
 
 document.body.addEventListener("mousemove", calibrate);
 // These intervals will cancel themselves upon confirmation
-var echoLoop = setInterval(function() {confirmServerAwake(echoLoop);}, 50);
-var start = setInterval(function() {startupMain(start)}, 50);
+var echo = setInterval(function() { confirmServerAwake(echo); }, 50);
+var start = setInterval(function() { startupMain(start); }, 50);
+var getCoordInterval = null;
+var recalibrationInterval = null;
 
 // Calculates document/pixel offsets, begins polling for coordinates, removes itself as a listener when complete
 function calibrate(event) {
-	xOffset = event.screenX - event.clientX;
-    yOffset = event.screenY - event.clientY;
-    console.log("Calibrated, xOffset = " + xOffset + " yOffset = " + yOffset);
+	totalXOffset = event.screenX - event.clientX;
+    totalYOffset = event.screenY - event.clientY;
+    browserXOffset = totalXOffset - windowXOffset;
+    browserYOffset = totalYOffset - windowYOffset;
+    console.log("Calibrated, totalXOffset = " + totalXOffset + ", totalYOffset = " + totalYOffset
+    	+ ", browserXOffset = " + browserXOffset + ", browserYOffset = " + browserYOffset);
 	// Remove this listener
     document.body.removeEventListener("mousemove", calibrate);
+}
+
+function recalibrate() {
+	// If the window has moved
+	if(windowXOffset !== window.screenX || windowYOffset !== window.screenY) {
+		var xDiff = window.screenX - windowXOffset;
+		var yDiff = window.screenY - windowYOffset;
+		// Make closest update to new offsets given the information
+		totalXOffset += xDiff;
+		totalYOffset += yDiff;
+		windowXOffset += xDiff;
+		windowYOffset += yDiff;
+		// Get a correct calibration off next mouse move, should only matter if header resizes
+		document.body.addEventListener("mousemove", calibrate);
+	}
 }
 
 // Once server responds to echo, set global flag and stop checking
@@ -44,9 +68,10 @@ function confirmServerAwake(self) {
 
 // Once global offsets and serverAwake flags are ready, start requesting coordinates, stop attempting startup
 function startupMain(self) {
-	if(serverAwake && xOffset !== null && yOffset !== null) { // Need to specify null in case of 0 offset
+	if(serverAwake && browserXOffset !== null && browserYOffset !== null) { // Need to specify null in case of 0 offset
 		gazeStart = Date.now(); // May be technically innaccurate in milliseconds, probably not important
-		setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
+		getCoordInterval = setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
+		recalibrationInterval = setInterval(function(){ recalibrate() }, 500);
 	    // Temp
 	    document.body.addEventListener("mousemove", function(event){
 		    postCoordToServer(event.clientX, event.clientY);
