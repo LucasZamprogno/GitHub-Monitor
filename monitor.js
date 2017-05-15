@@ -1,13 +1,17 @@
-var pastElem = null; // store the currently selected element
 var origBorder = ""; // stores the border settings of the selected element
-var lastTarget = null; // Previous element of interest
 var xOffset = null; // Difference between document x and screen pixel x
 var yOffset = null; // Difference between document y and screen pixel y
 var serverAwake = false;
+
 var targets = { // Keys are target elements, values are descriptors
 	"div.file": "Special case, won't see this",
 	"div#all_commit_comments": "Comment section"
 };
+
+var pastElem = null; // store the currently selected element
+var lastTarget = null; // Previous element of interest
+var lastIdentifier = null;
+var gazeStart = null;
 
 document.body.addEventListener("mousemove", calibrate);
 // These intervals will cancel themselves upon confirmation
@@ -41,10 +45,11 @@ function confirmServerAwake(self) {
 // Once global offsets and serverAwake flags are ready, start requesting coordinates, stop attempting startup
 function startupMain(self) {
 	if(serverAwake && xOffset !== null && yOffset !== null) { // Need to specify null in case of 0 offset
+		gazeStart = Date.now(); // May be technically innaccurate in milliseconds, probably not important
 		setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
 	    // Temp
 	    document.body.addEventListener("mousemove", function(event){
-		    postDataToServer(event.clientX, event.clientY);
+		    postCoordToServer(event.clientX, event.clientY);
 		});
 	    console.log("Requesting coordinates");
 		clearInterval(self);
@@ -91,12 +96,10 @@ function checkForTargetChange(viewed) {
 	
 	if(lastTarget && targettedElement) { // Past and current element are targets
 		if(!(lastTarget.is(targettedElement))) { // New target, report change (eventually a different function probably)
-			lastTarget = targettedElement;
-			console.log(getTargetDescription(targettedIdentifier, targettedElement));
+			handleGazeEvent(targettedElement, targettedIdentifier);
 		} 
 	} else if (lastTarget || targettedElement) { // Only one is/was is a target, definitely changed
-		lastTarget = targettedElement;
-		console.log(getTargetDescription(targettedIdentifier, targettedElement));
+		handleGazeEvent(targettedElement, targettedIdentifier);
 	} // else null and null, no change
 };
 
@@ -127,9 +130,37 @@ function getNewCoordFromServer() {
 }
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
-function postDataToServer(xPos, yPos) {
+function postCoordToServer(xPos, yPos) {
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open("POST", "https://localhost:4321/coordinate");
 	xmlhttp.setRequestHeader("Content-Type", "application/json");
 	xmlhttp.send(JSON.stringify({x:xPos, y:yPos}));
+}
+
+function postDataToServer(data) {
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.open("POST", "https://localhost:4321/data");
+	xmlhttp.setRequestHeader("Content-Type", "application/json");
+	xmlhttp.send(JSON.stringify(data));
+}
+
+function makeInteractionObject(type, target, start, end) {
+	var obj = {};
+	obj['Type'] = type;
+	obj['Target'] = target;
+	obj['Start'] = start;
+	obj['End'] = end;
+	obj['Duration'] = end - start;
+	return obj;
+}
+
+function handleGazeEvent(newElement, newIdentifier) {
+	var descrption = getTargetDescription(lastIdentifier, lastTarget);
+	var timestamp = Date.now();
+	var obj = makeInteractionObject('Gaze', descrption, gazeStart, timestamp);
+	console.log(JSON.stringify(obj));
+	postDataToServer(obj);
+	lastTarget = newElement;
+	lastIdentifier = newIdentifier;
+	gazeStart = timestamp;
 }
