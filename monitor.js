@@ -1,7 +1,12 @@
-/*****************************
-Everybody loves globals right?
-*****************************/
-var origBorder = ""; // stores the border settings of the selected element
+var targets = { // Keys are target identifiers, values are descriptors
+	"div.file": "Special case, won't see this",
+	"div#all_commit_comments": "Comment section"
+};
+
+
+/******************
+Startup/Maintenance
+******************/
 var windowXOffset = window.screenX; // Window distance from screen (0,0)
 var windowYOffset = window.screenY; 
 var totalXOffset = null; // Difference between document (0,0) and screen pixel (0,0)
@@ -9,15 +14,6 @@ var totalYOffset = null;
 var browserXOffset = null; // Distance from side/top of window to document
 var browserYOffset = null;
 var serverAwake = false;
-
-var targets = { // Keys are target identifiers, values are descriptors
-	"div.file": "Special case, won't see this",
-	"div#all_commit_comments": "Comment section"
-};
-
-var lastTarget = null; // Last observerd DOM element
-var lastIdentifier = null; // Identifier of last observed element
-var gazeStart = null; // Timestamp of when observation of the element began
 
 // These intervals/listeners will cancel themselves upon completion
 document.body.addEventListener("mousemove", calibrate);
@@ -28,9 +24,20 @@ var start = setInterval(function() { startupMain(start); }, 50);
 var getCoordInterval = null;
 var recalibrationInterval = null;
 
-/****************************
-Startup/Maintenance Functions
-****************************/
+// Once server responds to echo, set global flag and stop checking
+function confirmServerAwake(self) {
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function(event) {
+		if (xhr.readyState == 4 && xhr.status == 200) {
+	        serverAwake = true
+	        console.log("Echo responded");
+	        // Stop attempting to reach server
+	        clearInterval(self);
+	    }
+	};
+	xhr.open('GET', "https://localhost:4321/echo", true);
+	xhr.send();
+}
 
 // Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
 function calibrate(event) {
@@ -81,9 +88,13 @@ function startupMain(self) {
 	}
 }
 
-/*******************************
-Interaction Monitoring Functions
-*******************************/
+/************************
+Gaze Monitoring Functions
+************************/
+
+var lastTarget = null; // Last observerd DOM element
+var lastIdentifier = null; // Identifier of last observed element
+var gazeStart = null; // Timestamp of when observation of the element began
 
 // Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
 function checkForTargetChange(x, y) {
@@ -126,7 +137,7 @@ function getTargetDescription(key, elem) {
 // Mainly for cleanliness. Type refers to gaze vs click etc. Will add more fields as time goes on
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
-	obj['interactionType'] = 'Gaze';
+	obj['type'] = 'Gaze';
 	obj['interactionTarget'] = target;
 	obj['interactionStart'] = start;
 	obj['interactionEnd'] = end;
@@ -150,21 +161,6 @@ function handleGazeEvent(newElement, newIdentifier) {
 /*************
 REST Functions
 *************/
-
-// Once server responds to echo, set global flag and stop checking
-function confirmServerAwake(self) {
-	var xhr = new XMLHttpRequest();
-	xhr.onreadystatechange = function(event) {
-		if (xhr.readyState == 4 && xhr.status == 200) {
-	        serverAwake = true
-	        console.log("Echo responded");
-	        // Stop attempting to reach server
-	        clearInterval(self);
-	    }
-	};
-	xhr.open('GET', "https://localhost:4321/echo", true);
-	xhr.send();
-}
 
 // GET request, current gets x and y coordinate. Will include more details (e.g. timestamp) in the future
 function getNewCoordFromServer() {
