@@ -2,12 +2,12 @@
 Everybody loves globals right?
 *****************************/
 var origBorder = ""; // stores the border settings of the selected element
-var windowXOffset = window.screenX; // Window distance from screen 0
-var windowYOffset = window.screenY; // Window distance from screen 0
-var totalXOffset = null; // Difference between document x and screen pixel x
-var totalYOffset = null; // Difference between document y and screen pixel y
-var browserXOffset = null; // Distance from side of window to document
-var browserYOffset = null; // Distance from top of window to document
+var windowXOffset = window.screenX; // Window distance from screen (0,0)
+var windowYOffset = window.screenY; 
+var totalXOffset = null; // Difference between document (0,0) and screen pixel (0,0)
+var totalYOffset = null; 
+var browserXOffset = null; // Distance from side/top of window to document
+var browserYOffset = null;
 var serverAwake = false;
 
 var targets = { // Keys are target identifiers, values are descriptors
@@ -62,13 +62,19 @@ function recalibrate() {
 
 // Once global offsets and serverAwake flags are ready, start requesting coordinates, stop attempting startup
 function startupMain(self) {
-	if(serverAwake && browserXOffset !== null && browserYOffset !== null) { // Need to specify null in case of 0 offset
+	if(serverAwake && totalXOffset !== null && totalYOffset !== null) { // Need to specify null in case of 0 offset
 		gazeStart = Date.now(); // May be technically innaccurate in milliseconds, probably not important
 		getCoordInterval = setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
 		recalibrationInterval = setInterval(function(){ recalibrate() }, 500);
 	    // Temp
 	    document.body.addEventListener("mousemove", function(event){
 		    postCoordToServer(event.clientX, event.clientY);
+		});
+		// If the page is no longer visible, end the last gaze event
+		document.addEventListener("visibilitychange", function(event) {
+			if(document.hidden) {
+				handleGazeEvent(null, null);
+			}
 		});
 	    console.log("Monitoring running");
 		clearInterval(self);
@@ -118,9 +124,9 @@ function getTargetDescription(key, elem) {
 }
 
 // Mainly for cleanliness. Type refers to gaze vs click etc. Will add more fields as time goes on
-function makeInteractionObject(type, target, start, end) {
+function gazeInteractionObject(target, start, end) {
 	var obj = {};
-	obj['interactionType'] = type;
+	obj['interactionType'] = 'Gaze';
 	obj['interactionTarget'] = target;
 	obj['interactionStart'] = start;
 	obj['interactionEnd'] = end;
@@ -134,7 +140,7 @@ function makeInteractionObject(type, target, start, end) {
 function handleGazeEvent(newElement, newIdentifier) {
 	var descrption = getTargetDescription(lastIdentifier, lastTarget);
 	var timestamp = Date.now();
-	var obj = makeInteractionObject('Gaze', descrption, gazeStart, timestamp);
+	var obj = gazeInteractionObject(descrption, gazeStart, timestamp);
 	postDataToServer(obj);
 	lastTarget = newElement;
 	lastIdentifier = newIdentifier;
