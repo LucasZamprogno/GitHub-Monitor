@@ -70,13 +70,14 @@ function recalibrate() {
 // Once global offsets and serverAwake flags are ready, start requesting coordinates, stop attempting startup
 function startupMain(self) {
 	if(serverAwake && totalXOffset !== null && totalYOffset !== null) { // Need to specify null in case of 0 offset
-		gazeStart = Date.now(); // May be technically innaccurate in milliseconds, probably not important
+		gazeStart = Date.now(); // May be technically innaccurate, probably not important
 		getCoordInterval = setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
 		recalibrationInterval = setInterval(function(){ recalibrate() }, 500);
 	    // Temp
 	    document.body.addEventListener("mousemove", function(event){
 		    postCoordToServer(event.clientX, event.clientY);
 		});
+		addAllListeners();
 		// If the page is no longer visible, end the last gaze event
 		document.addEventListener("visibilitychange", function(event) {
 			if(document.hidden) {
@@ -86,6 +87,41 @@ function startupMain(self) {
 	    console.log("Monitoring running");
 		clearInterval(self);
 	}
+}
+
+/*************************
+Event Monitoring Functions
+*************************/
+
+// Just throw all the listeners on the window, the Big Brother approach to listeners
+function addAllListeners() {
+	window.addEventListener('click', genericEventHandler);
+	window.addEventListener('dblclick', genericEventHandler);
+	window.addEventListener('cut', genericEventHandler);
+	window.addEventListener('copy', genericEventHandler);
+	window.addEventListener('paste', genericEventHandler);
+	window.addEventListener('contextmenu', genericEventHandler);
+}
+
+function genericEventHandler(event) {
+	// This should get broken out into a function
+	for(var identifier of Object.keys(targets)) {
+		var found = $(event.target).closest(identifier);
+		if(found.length) {
+			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found));
+			postDataToServer(obj);
+		}
+	}
+}
+
+function eventInteractionObject(type, target) {
+	return {
+		'type': type,
+		'target': target,
+		'timestamp': Date.now(),
+		'pageTitle': document.title,
+		'pageHref': window.location.href
+	};
 }
 
 /************************
@@ -137,11 +173,11 @@ function getTargetDescription(key, elem) {
 // Mainly for cleanliness. Type refers to gaze vs click etc. Will add more fields as time goes on
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
-	obj['type'] = 'Gaze';
-	obj['interactionTarget'] = target;
-	obj['interactionStart'] = start;
-	obj['interactionEnd'] = end;
-	obj['interactionDuration'] = end - start;
+	obj['type'] = 'gaze';
+	obj['target'] = target;
+	obj['timestamp'] = start;
+	obj['timestampEnd'] = end;
+	obj['duration'] = end - start;
 	obj['pageTitle'] = document.title;
 	obj['pageHref'] = window.location.href;
 	return obj;
