@@ -1,0 +1,51 @@
+GitHub
+Repo: https://github.com/*/*
+  Files
+  Readme
+  Metadata (commits, branches, etc)
+  Branch list
+Commit list: https://github.com/*/*/commits/*
+  Commit list
+  Commit ID vs Name?
+  Commit:
+    Header
+    Code
+    Comments
+Issue tracker: https://github.com/*/*/issues
+  Filters
+  Dropdowns
+  Issues
+Issue: https://github.com/*/*/issues/*
+  Title
+  Options
+  Comments
+  Comment box
+  Participant list
+Pull requests: https://github.com/*/*/pulls AND https://github.com/pulls
+  Filters
+  Dropdowns
+  Requests
+Pull request: https://github.com/*/*/pull/*
+  Title
+  Conversation tab:
+    Comments
+    Merge status (need to see what this looks like with a conflict)
+    Comment box
+  Commits tab:
+    Commits
+  Files changed:
+    Title
+    Code
+    Response box
+Projects/Wiki/Pulse/Graphs/Settings?
+
+Google?
+  Search box
+  Results
+StackOverflow post
+  Title
+  Question body
+  Question comments
+  Answers
+  Answer comments
+  Specify clode blocks in each
