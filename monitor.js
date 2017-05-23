@@ -1,6 +1,27 @@
 var targets = { // Keys are target identifiers, values are descriptors
+	// Main repo page
+	"div.file-wrap": "Repo file explorer",
+	"div#readme": "Repo README",
+	"div.overall-summary": "Repo header (Commits, branches, etc.)",
+		// Figure out how to do branch list
+	// Commits
+	"li.commit": "Special case, won't see this", // Would be cool to identify if they are looking at the commit name or id
+	"div.full-commit": "Commit header",
 	"div.file": "Special case, won't see this",
-	"div#all_commit_comments": "Comment section"
+	"div#all_commit_comments": "Commit comment section",
+	// Issues + Pull requests
+		// Figure out how to do filters
+	"div.table-list-header": "Issue/Pull request dropdown menus",
+	"li.js-issue-row": "Special case, won't see this",
+	// Single issue + pull request comments
+	"div#partial-discussion-header": "Issue/Pull request header",
+	"div#partial-discussion-sidebar": "Issue/Pull request sidebar",
+	"div.comment": "Issue/Pull request comment",
+	"div.discussion-item": "Pull request discussion item", // Maybe expand this?
+	"div.pull-merging": "Pull request merge status",
+	"form.js-new-comment-form": "Issue/Pull request comment box",
+	// Pull request files
+	"div.pull-request-review-menu": "Pull request change review menu"
 };
 
 
@@ -74,9 +95,9 @@ function startupMain(self) {
 		getCoordInterval = setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
 		recalibrationInterval = setInterval(function(){ recalibrate() }, 500);
 	    // UNCOMMENT FOR MOUSE INPUT, ALSO CHANGE OFFSETS
-	    //document.body.addEventListener("mousemove", function(event){
-		//    postCoordToServer(event.clientX, event.clientY);
-		//});
+	    document.body.addEventListener("mousemove", function(event){
+		    postCoordToServer(event.clientX, event.clientY);
+		});
 		addAllListeners();
 		// If the page is no longer visible, end the last gaze event
 		document.addEventListener("visibilitychange", function(event) {
@@ -165,14 +186,26 @@ function getTargetDescription(key, elem) {
 		return "Untracked";
 	}
 	switch(key) {
-		case "div.file": // There can be multiple file divs in a commit, check which file
+		case "div.file":
 			return "File: " + $(elem).find("div.file-header > div.file-info > a").attr("title");
+		case "li.commit":
+			var data = elem.attr("data-channel");
+			var split = data.split(":");
+			var commitID = split[split.length - 1];
+			var name = $(elem).find("p.commit-title > a").attr("title");
+			return "Commit: id - " + commitID + ", name - " + name;
+		case "li.js-issue-row":
+			var title = $(elem).find("div > div > a.h4").text();
+			title = $.trim(title);
+			var spanContent = $(elem).find("div > div > div > span.opened-by").text();
+			var numberStr = $.trim(spanContent).split("\n")[0];
+			return "Issue/Pull request: " + numberStr + ", \"" + title + "\"";
 		default: // Used assigned label mapping in 'targets' global
 			return targets[key];
+			break;
 	}
 }
 
-// Mainly for cleanliness. Type refers to gaze vs click etc. Will add more fields as time goes on
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
 	obj['type'] = 'gaze';
@@ -218,7 +251,7 @@ function getNewCoordFromServer() {
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function postCoordToServer(xPos, yPos) {
 	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open("POST", "https://localhost:4321/coordinate");
+	xmlhttp.open("POST", "https://localhost:4321/coordinateM");
 	xmlhttp.setRequestHeader("Content-Type", "application/json");
 	xmlhttp.send(JSON.stringify({x:xPos, y:yPos}));
 }
