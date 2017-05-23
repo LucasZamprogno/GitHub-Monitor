@@ -1,51 +1,61 @@
 GitHub
 Repo: https://github.com/*/*
-  Files
-  Readme
-  Metadata (commits, branches, etc)
-  Branch list
+  Files (div.file-wrap, single fle is tr.js-navigation-item)
+  Readme (div#readme)
+  Metadata (commits, branches, etc) (div.overall-summary)
+  Branch list (see note 1)
 Commit list: https://github.com/*/*/commits/*
-  Commit list
-  Commit ID vs Name?
+  Branch list (see note 1)
+  Commit (li.commit)
+  Commit ID vs Name? (see note 2)
   Commit:
     Header
-    Code
-    Comments
+    Code (div.file generally, each line is a <tr> broken up into three components. Doubt tracker has the accuracy to make much use of these)
+    Comments (div#all_commit_comments)
 Issue tracker: https://github.com/*/*/issues
-  Filters
-  Dropdowns
-  Issues
+  Filters (see note 3)
+  Dropdowns (div.table-list-header)
+  Issues (see note 4 for generally, div.js-issue-row for specific)
 Issue: https://github.com/*/*/issues/*
-  Title
-  Options
-  Comments
-  Comment box
-  Participant list
+  Title (span.js-issue-title specifically, div#partial-discussion-header for the whole header (includes new issue button))
+  Options (div#partial-discussion-sidebar for the whole thing, div.discussion-sidebar-item for specific)
+  Comments (div.js-discussion for all, div.comment for one)
+  Comment box (div.timeline-new-comment)
 Pull requests: https://github.com/*/*/pulls AND https://github.com/pulls
-  Filters
-  Dropdowns
-  Requests
+  Filters (see note 3)
+  Dropdowns (div.table-list-header)
+  Requests (see note 4 for generally, div.js-issue-row for specific)
 Pull request: https://github.com/*/*/pull/*
-  Title
+  Title (span.js-issue-title specifically, div#partial-discussion-header for the whole header (includes new issue button))
+  Options (div#partial-discussion-sidebar for the whole thing, div.discussion-sidebar-item for specific)
   Conversation tab:
-    Comments
+    Comments (div.js-discussion for all, div.comment for one)
+    Detail (div.discussion-item, may be too small/generic, most is border)
     Merge status (need to see what this looks like with a conflict)
-    Comment box
+    Comment box (div.timeline-new-comment)
   Commits tab:
-    Commits
+    Commits (li.commit)
   Files changed:
-    Title
-    Code
-    Response box
+    Title (span.js-issue-title specifically, div#partial-discussion-header for the whole header (includes new issue button))
+    Code (div.file generally, each line is a <tr> broken up into three components. Doubt tracker has the accuracy to make much use of these)
+    Response box (div.pull-request-review-menu)
 Projects/Wiki/Pulse/Graphs/Settings?
 
-Google?
-  Search box
-  Results
-StackOverflow post
-  Title
-  Question body
-  Question comments
-  Answers
-  Answer comments
-  Specify clode blocks in each
+Google?https://www.google.ca/search?*
+  Search box (div.sbdd_a)
+  Search suggestions (div.sbibtd)
+  Results (individual is div.g, all is div#center_col)
+  
+StackOverflow post https://stackoverflow.com/questions/*
+  Title (div#question-header)
+  Question body (div#question)
+  Comments (div.comments, applies to question and answer)
+  Answers (div.answer, div.accepted_answer)
+  Specify clode blocks in each (<code> or <pre>)
+
+
+1: Shares a parent with the button that creates the dropdown. May need to create a special case?
+2: Both the title and the id secions share the class "table-list-cell" which is the only identifier for the commit title section.
+    The id section does have the class "commit-links-cell"
+3: No unique selector, may have unique children though
+4: No unique selector, may be able to get by with <ul>? Can just do individual issues
