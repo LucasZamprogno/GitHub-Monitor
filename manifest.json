@@ -10,7 +10,7 @@
             "128": "icon128.bmp"},
   "content_scripts": [
     {
-      "matches": ["*://github.com/*"],
+      "matches": ["*://github.com/*", "https://stackoverflow.com/questions/*"],
       "js": ["jquery.js", "monitor.js"]
     }
   ]

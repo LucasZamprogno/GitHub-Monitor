@@ -1,4 +1,5 @@
 var targets = { // Keys are target identifiers, values are descriptors
+// GITHUB
 	// Main repo page
 	"div.file-wrap": "Repo file explorer",
 	"div#readme": "Repo README",
@@ -21,7 +22,12 @@ var targets = { // Keys are target identifiers, values are descriptors
 	"div.pull-merging": "Pull request merge status",
 	"form.js-new-comment-form": "Issue/Pull request comment box",
 	// Pull request files
-	"div.pull-request-review-menu": "Pull request change review menu"
+	"div.pull-request-review-menu": "Pull request change review menu",
+// STACKOVERFLOW QUESTION
+	"div#question-header": "Question title",
+	"td.postcell": "Question body",
+	"div.comments": "Comments",
+	"td.answercell": "Answer",
 };
 
 
