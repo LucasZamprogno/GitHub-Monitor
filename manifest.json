@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["*://github.com/*", "https://stackoverflow.com/questions/*"],
-      "js": ["jquery.js", "monitor.js"]
+      "js": ["jquery.js", "contentScript.js"]
     }
   ]
 }

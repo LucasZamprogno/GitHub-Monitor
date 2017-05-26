@@ -61,7 +61,7 @@ document.addEventListener("visibilitychange", function(event) {
 });
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if(request.hasOwnProprty('x') && request.hasOwnProprty('y')) {
+	if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
 		var result = checkForTargetChange(request.x, request.y);
 		if(result) {
 			sendMessageToExtension(result);
