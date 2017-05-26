@@ -4,10 +4,14 @@
   "version_name": "Proof of concept",
   "manifest_version": 2,
   "description": "Monitors user interaction in GitHub code review",
-  "permissions": ["*://github.com/*", "https://localhost/*"],
-  "icons": {"16": "icon16.bmp",
-            "48": "icon48.bmp",
-            "128": "icon128.bmp"},
+  "permissions": ["*://github.com/*", "https://stackoverflow.com/questions/*", "https://localhost/*"],
+  "icons": {"16": "icon16.png",
+            "48": "icon48.png",
+            "128": "icon128.png"},
+  "browser_action": {
+    "default_icon": "icon48.png",
+    "default_popup": "popup.html"
+  },
   "background": {
     "scripts": ["background.js"]
   },

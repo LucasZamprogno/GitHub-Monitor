@@ -6,6 +6,8 @@ var getCoordInterval = setInterval(function() { getNewCoordFromServer() }, 17); 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   	if(sender.tab) {
   		postDataToServer(request);
+  	} else {
+  		console.log(request['ayy']);
   	}
  });
 
