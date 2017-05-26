@@ -8,6 +8,9 @@
   "icons": {"16": "icon16.bmp",
             "48": "icon48.bmp",
             "128": "icon128.bmp"},
+  "background": {
+    "scripts": ["background.js"]
+  },
   "content_scripts": [
     {
       "matches": ["*://github.com/*", "https://stackoverflow.com/questions/*"],
