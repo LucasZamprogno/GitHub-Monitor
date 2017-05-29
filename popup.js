@@ -1,5 +1,38 @@
-document.addEventListener('DOMContentLoaded', function(){
-	document.getElementById('only-thing').addEventListener('click', function(){
-		chrome.runtime.sendMessage({'foo': 'bar'});
-	});
-});
+$(document).ready(function(){
+  // Check background status
+  var statusElement = $('p > span#status');
+  var sessionElement = $('p > span#session-id')
+  var bg = chrome.extension.getBackgroundPage();
+  
+  if(bg.sessionId) {
+    console.log(typeof bg.sessionId);
+    sessionElement.text(bg.sessionId);
+  }
+
+  if(bg.reporting) {
+    statusElement.text('Running');
+  } else {
+    statusElement.text('Stopped');
+  }
+
+  $('button#set-session').click(function(e) {
+    e.preventDefault();
+    var session = $('input#session-field').val();
+    sessionElement.text(session);
+    bg.sessionId = session;
+    bg.setLocal('sessionId', session);
+  });
+
+  $('button#start').click(function(e) {
+    e.preventDefault();
+    bg.startReporting();
+    statusElement.text('Running');
+  });
+
+  $('button#stop').click(function(e) {
+    e.preventDefault();
+    bg.stopReporting();
+    statusElement.text('Stopped');
+  });
+})
+
