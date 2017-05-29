@@ -1,10 +1,11 @@
+var PORT = 4321;
+
 // ALL LOCAL STORAGE SAVES AS STRING
 
 // Short-circuit first time startup
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
 
-// TODO Wait for trigger
 var getCoordInterval;
 var reporting;
 var sessionId = getLocal('sessionId');
@@ -15,14 +16,10 @@ if(getLocal('reporting')) {
 
 // Pass data from content scripts on to server
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  	if(sender.tab && reporting) {
-  		postDataToServer(request);
-  	}
- });
-
-function setLocal(key, val) {
-	localStorage[key] = val;
-}
+	if(sender.tab && reporting) {
+		postDataToServer(request);
+	}
+});
 
 // I'm sure there's a better way to get around everything being strings
 // But we're not really doing that much to bother looking into it
@@ -44,6 +41,10 @@ function getLocal(key) {
 	}
 }
 
+function setLocal(key, val) {
+	localStorage[key] = val;
+}
+
 function clearLocal(key) {
 	localStorage[key] = null;
 }
@@ -63,27 +64,29 @@ function stopReporting() {
 function sendCoordToActiveTabs(x, y) {
 	chrome.tabs.query({active: true}, function(tabs) {
 		for(var tab of tabs) {
-  			chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y});
+			chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y});
 		}
 	})
 }
 
+// Ask server for newest coordinates, then inform all tabs running content scripts
 function getNewCoordFromServer() {
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function(event) {
 		if (xhr.readyState == 4 && xhr.status == 200) {
-	        var response = JSON.parse(xhr.responseText);
-	        sendCoordToActiveTabs(response.x, response.y);
-	    }
+			var response = JSON.parse(xhr.responseText);
+			sendCoordToActiveTabs(response.x, response.y);
+		}
 	};
-	xhr.open('GET', "https://localhost:4321/coordinate", true);
+	xhr.open('GET', 'https://localhost:' + PORT + '/coordinate', true);
 	xhr.send();
 }
 
+// Add on session ID and send event to the server
 function postDataToServer(data) {
 	data['sessionId'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open("POST", "https://localhost:4321/data");
-	xmlhttp.setRequestHeader("Content-Type", "application/json");
+	xmlhttp.open('POST', 'https://localhost:' + PORT + '/data');
+	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify(data));
 }

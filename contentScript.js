@@ -1,39 +1,41 @@
+var PORT = 4321;
+
 var targets = { // Keys are target identifiers, values are descriptors
 // GITHUB
 	// Main repo page
-	"div.file-wrap": "Repo file explorer",
-	"div#readme": "Repo README",
-	"div.overall-summary": "Repo header (Commits, branches, etc.)",
+	'div.file-wrap': 'Repo file explorer',
+	'div#readme': 'Repo README',
+	'div.overall-summary': 'Repo header (Commits, branches, etc.)',
 		// Figure out how to do branch list
 	// Commits
-	"li.commit": "Special case, won't see this", // Would be cool to identify if they are looking at the commit name or id
-	"div.full-commit": "Commit header",
-	"div.file": "Special case, won't see this",
-	"div#all_commit_comments": "Commit comment section",
+	'li.commit': 'Special case, won\'t see this', // Would be cool to identify if they are looking at the commit name or id
+	'div.full-commit': 'Commit header',
+	'div.file': 'Special case, won\'t see this',
+	'div#all_commit_comments': 'Commit comment section',
 	// Issues + Pull requests
 		// Figure out how to do filters
-	"div.table-list-header": "Issue/Pull request dropdown menus",
-	"li.js-issue-row": "Special case, won't see this",
+	'div.table-list-header': 'Issue/Pull request dropdown menus',
+	'li.js-issue-row': 'Special case, won\'t see this',
 	// Single issue + pull request comments
-	"div#partial-discussion-header": "Issue/Pull request header",
-	"div#partial-discussion-sidebar": "Issue/Pull request sidebar",
-	"div.comment": "Issue/Pull request comment",
-	"div.discussion-item": "Pull request discussion item", // Maybe expand this?
-	"div.pull-merging": "Pull request merge status",
-	"form.js-new-comment-form": "Issue/Pull request comment box",
+	'div#partial-discussion-header': 'Issue/Pull request header',
+	'div#partial-discussion-sidebar': 'Issue/Pull request sidebar',
+	'div.comment': 'Issue/Pull request comment',
+	'div.discussion-item': 'Pull request discussion item', // Maybe expand this?
+	'div.pull-merging': 'Pull request merge status',
+	'form.js-new-comment-form': 'Issue/Pull request comment box',
 	// Pull request files
-	"div.pull-request-review-menu": "Pull request change review menu",
+	'div.pull-request-review-menu': 'Pull request change review menu',
 // STACKOVERFLOW QUESTION
-	"div#question-header": "Question title",
-	"td.postcell": "Question body",
-	"div.comments": "Comments",
-	"td.answercell": "Answer",
+	'div#question-header': 'Question title',
+	'td.postcell': 'Question body',
+	'div.comments': 'Comments',
+	'td.answercell': 'Answer',
 };
-
 
 /******************
 Startup/Maintenance
 ******************/
+
 var windowXOffset = window.screenX; // Window distance from screen (0,0)
 var windowYOffset = window.screenY; 
 var totalXOffset = null; // Difference between document (0,0) and screen pixel (0,0)
@@ -41,30 +43,31 @@ var totalYOffset = null;
 var browserXOffset = null; // Distance from side/top of window to document
 var browserYOffset = null;
 
-// This listener will cancel itself upon completion
-document.body.addEventListener("mousemove", calibrate);
-
 var recalibrationInterval;
-
-// COMMENT OUT WHEN USING TRACKER
-document.body.addEventListener("mousemove", function(event){
-    postCoordToServer(event.clientX, event.clientY);
-});
 
 addAllListeners();
 
+// This listener will cancel itself upon completion
+document.body.addEventListener('mousemove', calibrate);
+
+// COMMENT OUT WHEN USING TRACKER - Reports mouse moves as gazes
+document.body.addEventListener('mousemove', function(event) {
+	postCoordToServer(event.clientX, event.clientY);
+});
+
 // If the page is no longer visible, end the last gaze event
-document.addEventListener("visibilitychange", function(event) {
+document.addEventListener('visibilitychange', function(event) {
 	if(document.hidden) {
 		handleGazeEvent(null, null);
 	}
 });
 
+// Listen for coordinates from background.js, report when nesessary
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
 		var result = checkForTargetChange(request.x, request.y);
 		if(result) {
-			sendMessageToExtension(result);
+			chrome.runtime.sendMessage(result);
 		}
 	}
 });
@@ -72,14 +75,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 // Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
 function calibrate(event) {
 	totalXOffset = event.screenX - event.clientX;
-    totalYOffset = event.screenY - event.clientY;
-    browserXOffset = totalXOffset - windowXOffset;
-    browserYOffset = totalYOffset - windowYOffset;
-    console.log("Calibrated, totalXOffset = " + totalXOffset + ", totalYOffset = " + totalYOffset
-    	+ ", browserXOffset = " + browserXOffset + ", browserYOffset = " + browserYOffset);
+	totalYOffset = event.screenY - event.clientY;
+	browserXOffset = totalXOffset - windowXOffset;
+	browserYOffset = totalYOffset - windowYOffset;
+	console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
+	recalibrationInterval = setInterval(function() { recalibrate() }, 1000);
 	// Remove this listener
-    recalibrationInterval = setInterval(function(){ recalibrate() }, 1000);
-    document.body.removeEventListener("mousemove", calibrate);
+	document.body.removeEventListener('mousemove', calibrate);
 }
 
 // Check if the window has changed and update the offsets
@@ -94,7 +96,7 @@ function recalibrate() {
 		windowXOffset += xDiff;
 		windowYOffset += yDiff;
 		// Get a correct calibration off next mouse move, should only matter if header resizes
-		document.body.addEventListener("mousemove", calibrate);
+		document.body.addEventListener('mousemove', calibrate);
 	}
 }
 
@@ -112,16 +114,18 @@ function addAllListeners() {
 	document.addEventListener('contextmenu', genericEventHandler);
 }
 
+// Handles any 'addEventListener' style events
 function genericEventHandler(event) {
 	for(var identifier of Object.keys(targets)) {
 		var found = $(event.target).closest(identifier);
 		if(found.length) {
 			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found));
-			sendMessageToExtension(obj);
+			chrome.runtime.sendMessage(obj);
 		}
 	}
 }
 
+// Object creating funciton just for cleanliness
 function eventInteractionObject(type, target) {
 	return {
 		'type': type,
@@ -142,7 +146,7 @@ var gazeStart = Date.now(); // Timestamp of when observation of the element bega
 
 // Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
 function checkForTargetChange(x, y) {
-	// TOGGLE FOR MOUSE OR EYE INPUT
+	// TOGGLE FOLLOWING TWO LINES FOR MOUSE OR EYE INPUT
 	var viewed = document.elementFromPoint(x, y);
 	//var viewed = document.elementFromPoint(x - totalXOffset, y - totalYOffset);
 	var targettedIdentifier = null;
@@ -170,29 +174,30 @@ function checkForTargetChange(x, y) {
 // How to lable the target. Null is untracked, some elements have single lable, some have variable labels
 function getTargetDescription(key, elem) {
 	if(key == null) {
-		return "Untracked";
+		return 'Untracked';
 	}
 	switch(key) {
-		case "div.file":
-			return "File: " + $(elem).find("div.file-header > div.file-info > a").attr("title");
-		case "li.commit":
-			var data = elem.attr("data-channel");
-			var split = data.split(":");
+		case 'div.file':
+			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
+		case 'li.commit':
+			var data = elem.attr('data-channel');
+			var split = data.split(':');
 			var commitID = split[split.length - 1];
-			var name = $(elem).find("p.commit-title > a").attr("title");
-			return "Commit: id - " + commitID + ", name - " + name;
-		case "li.js-issue-row":
-			var title = $(elem).find("div > div > a.h4").text();
+			var name = $(elem).find('p.commit-title > a').attr('title');
+			return 'Commit: id - ' + commitID + ', name - ' + name;
+		case 'li.js-issue-row':
+			var title = $(elem).find('div > div > a.h4').text();
 			title = $.trim(title);
-			var spanContent = $(elem).find("div > div > div > span.opened-by").text();
-			var numberStr = $.trim(spanContent).split("\n")[0];
-			return "Issue/Pull request: " + numberStr + ", \"" + title + "\"";
+			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
+			var numberStr = $.trim(spanContent).split('\n')[0];
+			return 'Issue/Pull request: ' + numberStr + ', \'' + title + '\'';
 		default: // Used assigned label mapping in 'targets' global
 			return targets[key];
 			break;
 	}
 }
 
+// Object creating funciton just for cleanliness
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
 	obj['type'] = 'gaze';
@@ -211,7 +216,7 @@ function handleGazeEvent(newElement, newIdentifier) {
 	if(lastIdentifier && lastTarget) {
 		var descrption = getTargetDescription(lastIdentifier, lastTarget);
 		var obj = gazeInteractionObject(descrption, gazeStart, gazeEnd);
-		sendMessageToExtension(obj);
+		chrome.runtime.sendMessage(obj);
 	}
 	lastTarget = newElement;
 	lastIdentifier = newIdentifier;
@@ -219,18 +224,13 @@ function handleGazeEvent(newElement, newIdentifier) {
 }
 
 /*************
-REST Functions
+Other Functions
 *************/
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function postCoordToServer(xPos, yPos) {
 	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open("POST", "https://localhost:4321/coordinateM");
-	xmlhttp.setRequestHeader("Content-Type", "application/json");
+	xmlhttp.open('POST', 'https://localhost:' + PORT + '/coordinateM');
+	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify({x:xPos, y:yPos}));
-}
-
-// Send back data object to be logged
-function sendMessageToExtension(data) {
-	chrome.runtime.sendMessage(data);
 }
