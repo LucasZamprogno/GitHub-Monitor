@@ -2,7 +2,9 @@ var PORT = 4321;
 
 var targets = { // Keys are target identifiers, values are descriptors
 // GITHUB
-	// Main repo page
+	// Main repo page/general
+	'div.header': 'Main github header',
+	'div.repohead': 'Repo header',
 	'div.file-wrap': 'Repo file explorer',
 	'div#readme': 'Repo README',
 	'div.overall-summary': 'Repo header (Commits, branches, etc.)',
@@ -17,8 +19,9 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div.table-list-header': 'Issue/Pull request dropdown menus',
 	'li.js-issue-row': 'Special case, won\'t see this',
 	// Single issue + pull request comments
+	'div.new-issue-form > div.discussion-timeline': 'New issue form title and comment',
 	'div#partial-discussion-header': 'Issue/Pull request header',
-	'div#partial-discussion-sidebar': 'Issue/Pull request sidebar',
+	'div.discussion-sidebar': 'Issue/Pull request sidebar',
 	'div.comment': 'Issue/Pull request comment',
 	'div.discussion-item': 'Pull request discussion item', // Maybe expand this?
 	'div.pull-merging': 'Pull request merge status',
@@ -229,8 +232,5 @@ Other Functions
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function postCoordToServer(xPos, yPos) {
-	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open('POST', 'https://localhost:' + PORT + '/coordinateM');
-	xmlhttp.setRequestHeader('Content-Type', 'application/json');
-	xmlhttp.send(JSON.stringify({'x': xPos, 'y': yPos, 'timestamp': Date.now()}));
+	chrome.runtime.sendMessage({'x': xPos, 'y': yPos, 'timestamp': Date.now()});
 }

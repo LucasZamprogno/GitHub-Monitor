@@ -18,7 +18,11 @@ if(getLocal('reporting')) {
 // Pass data from content scripts on to server
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(sender.tab && reporting) {
-		postDataToServer(request);
+		if(request.hasOwnProperty('x')) {
+			postCoordToServer(request);
+		} else {
+			postDataToServer(request);
+		}
 	}
 });
 
@@ -51,9 +55,13 @@ function clearLocal(key) {
 }
 
 function startReporting() {
-	getCoordInterval = setInterval(function() { getNewCoordFromServer() }, 17); // 16.66... is 60hz, so this is just below.
-	reporting = true;
-	setLocal('reporting', true);
+	if(sessionId) {
+		getCoordInterval = setInterval(function() { getNewCoordFromServer(sessionId) }, 17); // 16.66... is 60hz, so this is just below.
+		reporting = true;
+		setLocal('reporting', true);
+	} else {
+		stopReporting();
+	}
 }
 
 function stopReporting() {
@@ -71,7 +79,8 @@ function sendCoordToActiveTabs(x, y) {
 }
 
 // Ask server for newest coordinates, then inform all tabs running content scripts
-function getNewCoordFromServer() {
+function getNewCoordFromServer(id) {
+	var params = '?id=' + id;
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function(event) {
 		if (xhr.readyState == 4 && xhr.status == 200) {
@@ -82,15 +91,22 @@ function getNewCoordFromServer() {
 			}
 		}
 	};
-	xhr.open('GET', 'https://localhost:' + PORT + '/coordinate', true);
+	xhr.open('GET', 'https://localhost:' + PORT + '/coordinate' + params, true);
 	xhr.send();
 }
 
 // Add on session ID and send event to the server
 function postDataToServer(data) {
-	data['sessionId'] = sessionId;
+	data['id'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open('POST', 'https://localhost:' + PORT + '/data');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify(data));
+}
+
+function postCoordToServer(xPos, yPos) {
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.open('POST', 'https://localhost:' + PORT + '/coordinateM');
+	xmlhttp.setRequestHeader('Content-Type', 'application/json');
+	xmlhttp.send(JSON.stringify({'x': xPos, 'y': yPos, 'timestamp': Date.now()}));
 }
