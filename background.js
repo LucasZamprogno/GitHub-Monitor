@@ -9,6 +9,7 @@ var PORT = 4321;
 var getCoordInterval;
 var reporting;
 var sessionId = getLocal('sessionId');
+var lastTimestamp = 0;
 
 if(getLocal('reporting')) {
 	startReporting();
@@ -75,7 +76,10 @@ function getNewCoordFromServer() {
 	xhr.onreadystatechange = function(event) {
 		if (xhr.readyState == 4 && xhr.status == 200) {
 			var response = JSON.parse(xhr.responseText);
-			sendCoordToActiveTabs(response.x, response.y);
+			if(response['timestamp'] !== lastTimestamp) {
+				lastTimestamp = response['timestamp'];
+				sendCoordToActiveTabs(response['x'], response['y']);
+			}
 		}
 	};
 	xhr.open('GET', 'https://localhost:' + PORT + '/coordinate', true);

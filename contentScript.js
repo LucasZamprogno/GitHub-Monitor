@@ -232,5 +232,5 @@ function postCoordToServer(xPos, yPos) {
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open('POST', 'https://localhost:' + PORT + '/coordinateM');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
-	xmlhttp.send(JSON.stringify({x:xPos, y:yPos}));
+	xmlhttp.send(JSON.stringify({'x': xPos, 'y': yPos, 'timestamp': Date.now()}));
 }
