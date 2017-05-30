@@ -232,5 +232,10 @@ Other Functions
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function postCoordToServer(xPos, yPos) {
-	chrome.runtime.sendMessage({'x': xPos, 'y': yPos, 'timestamp': Date.now()});
+	var obj = {
+		'x': xPos,
+		'y': yPos,
+		'timestamp': Date.now()
+	};
+	chrome.runtime.sendMessage(obj);
 }

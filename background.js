@@ -104,9 +104,10 @@ function postDataToServer(data) {
 	xmlhttp.send(JSON.stringify(data));
 }
 
-function postCoordToServer(xPos, yPos) {
+function postCoordToServer(data) {
+	data['id'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open('POST', 'https://localhost:' + PORT + '/coordinateM');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
-	xmlhttp.send(JSON.stringify({'x': xPos, 'y': yPos, 'timestamp': Date.now()}));
+	xmlhttp.send(JSON.stringify(data));
 }
