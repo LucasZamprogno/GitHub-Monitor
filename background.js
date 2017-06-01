@@ -91,7 +91,7 @@ function getNewCoordFromServer(id) {
 			}
 		}
 	};
-	xhr.open('GET', 'https://localhost:' + PORT + '/coordinate' + params, true);
+	xhr.open('GET', 'http://localhost:' + PORT + '/coordinate' + params, true);
 	xhr.send();
 }
 
@@ -99,7 +99,7 @@ function getNewCoordFromServer(id) {
 function postDataToServer(data) {
 	data['id'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open('POST', 'https://localhost:' + PORT + '/data');
+	xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify(data));
 }
@@ -107,7 +107,7 @@ function postDataToServer(data) {
 function postCoordToServer(data) {
 	data['id'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open('POST', 'https://localhost:' + PORT + '/coordinateM');
+	xmlhttp.open('POST', 'http://localhost:' + PORT + '/coordinateM');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify(data));
 }
