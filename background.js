@@ -9,7 +9,17 @@ var PORT = 4321;
 var getCoordInterval;
 var reporting;
 var sessionId = getLocal('sessionId');
-var lastTimestamp = 0;
+var ws;
+
+if('WebSocket' in window) {
+	ws = new WebSocket('ws://localhost:2366');
+	ws.onmessage = function(e){
+		var obj = JSON.parse(e.data);
+		var x = obj['x'];
+		var y = obj['y'];
+		sendCoordToActiveTabs(x, y);
+	}
+}
 
 if(getLocal('reporting')) {
 	startReporting();
@@ -19,7 +29,7 @@ if(getLocal('reporting')) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(sender.tab && reporting) {
 		if(request.hasOwnProperty('x')) {
-			postCoordToServer(request);
+			sendCoordToActiveTabs(request['x'], request['y']);
 		} else {
 			postDataToServer(request);
 		}
@@ -56,7 +66,7 @@ function clearLocal(key) {
 
 function startReporting() {
 	if(sessionId) {
-		getCoordInterval = setInterval(function() { getNewCoordFromServer(sessionId) }, 17); // 16.66... is 60hz, so this is just below.
+		getCoordInterval = setInterval(function() { pingTracker() }, 17); // 16.66... is 60hz, so this is just below.
 		reporting = true;
 		setLocal('reporting', true);
 	} else {
@@ -78,23 +88,6 @@ function sendCoordToActiveTabs(x, y) {
 	})
 }
 
-// Ask server for newest coordinates, then inform all tabs running content scripts
-function getNewCoordFromServer(id) {
-	var params = '?id=' + id;
-	var xhr = new XMLHttpRequest();
-	xhr.onreadystatechange = function(event) {
-		if (xhr.readyState == 4 && xhr.status == 200) {
-			var response = JSON.parse(xhr.responseText);
-			if(response['timestamp'] !== lastTimestamp) {
-				lastTimestamp = response['timestamp'];
-				sendCoordToActiveTabs(response['x'], response['y']);
-			}
-		}
-	};
-	xhr.open('GET', 'http://localhost:' + PORT + '/coordinate' + params, true);
-	xhr.send();
-}
-
 // Add on session ID and send event to the server
 function postDataToServer(data) {
 	data['id'] = sessionId;
@@ -104,10 +97,6 @@ function postDataToServer(data) {
 	xmlhttp.send(JSON.stringify(data));
 }
 
-function postCoordToServer(data) {
-	data['id'] = sessionId;
-	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open('POST', 'http://localhost:' + PORT + '/coordinateM');
-	xmlhttp.setRequestHeader('Content-Type', 'application/json');
-	xmlhttp.send(JSON.stringify(data));
+function pingTracker() {
+	ws.send("Ping");
 }

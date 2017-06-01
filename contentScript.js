@@ -54,9 +54,9 @@ addAllListeners();
 document.body.addEventListener('mousemove', calibrate);
 
 // COMMENT OUT WHEN USING TRACKER - Reports mouse moves as gazes
-document.body.addEventListener('mousemove', function(event) {
-	postCoordToServer(event.clientX, event.clientY);
-});
+//document.body.addEventListener('mousemove', function(event) {
+//	imposterGazeEvent(event.clientX, event.clientY);
+//});
 
 // If the page is no longer visible, end the last gaze event
 document.addEventListener('visibilitychange', function(event) {
@@ -150,8 +150,8 @@ var gazeStart = Date.now(); // Timestamp of when observation of the element bega
 // Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
 function checkForTargetChange(x, y) {
 	// TOGGLE FOLLOWING TWO LINES FOR MOUSE OR EYE INPUT
-	var viewed = document.elementFromPoint(x, y);
-	//var viewed = document.elementFromPoint(x - totalXOffset, y - totalYOffset);
+	//var viewed = document.elementFromPoint(x, y);
+	var viewed = document.elementFromPoint(x - totalXOffset, y - totalYOffset);
 	var targettedIdentifier = null;
 	var targettedElement = null;
 
@@ -231,7 +231,7 @@ Other Functions
 *************/
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
-function postCoordToServer(xPos, yPos) {
+function imposterGazeEvent(xPos, yPos) {
 	var obj = {
 		'x': xPos,
 		'y': yPos,
