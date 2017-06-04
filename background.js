@@ -9,16 +9,7 @@ var PORT = 4321;
 var reporting;
 var sessionId = getLocal('sessionId');
 var ws;
-
-if('WebSocket' in window) {
-	ws = new WebSocket('ws://localhost:2366');
-	ws.onmessage = function(e){
-		var obj = JSON.parse(e.data);
-		var x = obj['x'];
-		var y = obj['y'];
-		sendCoordToActiveTabs(x, y);
-	}
-}
+var attemptConnection = setInterval(function(){ connectToTracker() }, 100);
 
 if(getLocal('reporting')) {
 	startReporting();
@@ -34,6 +25,21 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		}
 	}
 });
+
+function connectToTracker() {
+	ws = new WebSocket('ws://localhost:2366');
+	clearInterval(attemptConnection);
+	ws.onmessage = function(e) {
+		var obj = JSON.parse(e.data);
+		var x = obj['x'];
+		var y = obj['y'];
+		sendCoordToActiveTabs(x, y);
+	}
+	ws.onclose = function(e) {
+		ws = null;
+		attemptConnection = setInterval(function(){ connectToTracker() }, 100);
+	}
+}
 
 // I'm sure there's a better way to get around everything being strings
 // But we're not really doing that much to bother looking into it
@@ -80,7 +86,9 @@ function stopReporting() {
 function sendCoordToActiveTabs(x, y) {
 	chrome.tabs.query({active: true}, function(tabs) {
 		for(var tab of tabs) {
-			chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y});
+			chrome.tabs.getZoom(tab.id, function(ratio){
+				chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y, 'zoom': ratio});
+			});
 		}
 	})
 }

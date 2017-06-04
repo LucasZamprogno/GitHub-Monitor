@@ -68,7 +68,7 @@ document.addEventListener('visibilitychange', function(event) {
 // Listen for coordinates from background.js, report when nesessary
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
-		var result = checkForTargetChange(request.x, request.y);
+		var result = checkForTargetChange(request['x'], request['y'], request['zoom']);
 		if(result) {
 			chrome.runtime.sendMessage(result);
 		}
@@ -148,10 +148,12 @@ var lastIdentifier = null; // Identifier of last observed element
 var gazeStart = Date.now(); // Timestamp of when observation of the element began
 
 // Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
-function checkForTargetChange(x, y) {
+function checkForTargetChange(x, y, zoom) {
+	var adjustedX = Math.round((x - totalXOffset)/zoom);
+	var adjustedY = Math.round((y - totalYOffset)/zoom);
 	// TOGGLE FOLLOWING TWO LINES FOR MOUSE OR EYE INPUT
 	//var viewed = document.elementFromPoint(x, y);
-	var viewed = document.elementFromPoint(x - totalXOffset, y - totalYOffset);
+	var viewed = document.elementFromPoint(adjustedX, adjustedY);
 	var targettedIdentifier = null;
 	var targettedElement = null;
 
