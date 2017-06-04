@@ -6,7 +6,6 @@ var PORT = 4321;
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
 
-var getCoordInterval;
 var reporting;
 var sessionId = getLocal('sessionId');
 var ws;
@@ -25,7 +24,7 @@ if(getLocal('reporting')) {
 	startReporting();
 }
 
-// Pass data from content scripts on to server
+// Pass data from content scripts on to server OR pass mouse coordinates back to scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(sender.tab && reporting) {
 		if(request.hasOwnProperty('x')) {
@@ -66,7 +65,6 @@ function clearLocal(key) {
 
 function startReporting() {
 	if(sessionId) {
-		getCoordInterval = setInterval(function() { pingTracker() }, 17); // 16.66... is 60hz, so this is just below.
 		reporting = true;
 		setLocal('reporting', true);
 	} else {
@@ -75,7 +73,6 @@ function startReporting() {
 }
 
 function stopReporting() {
-	clearInterval(getCoordInterval);
 	reporting = false;
 	setLocal('reporting', false);
 }
@@ -90,13 +87,10 @@ function sendCoordToActiveTabs(x, y) {
 
 // Add on session ID and send event to the server
 function postDataToServer(data) {
+	console.log('POSTing to server');
 	data['id'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify(data));
-}
-
-function pingTracker() {
-	ws.send("Ping");
 }
