@@ -1,5 +1,5 @@
-var PORT = 4321;
-
+var domains = ['github', 'stackoverflow', 'google'];
+var mouseInput = true;
 var targets = { // Keys are target identifiers, values are descriptors
 // GITHUB
 	// Main repo page/general
@@ -33,6 +33,10 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'td.postcell': 'Question body',
 	'div.comments': 'Comments',
 	'td.answercell': 'Answer',
+// GOOGLE
+	'div.sbdd_a': 'Search field',
+	'div.sbibtd': 'Search suggestions',
+	'div.g': 'Search result' // This could be made specific but that might put a lot of people off of using high detail mode
 };
 
 /******************
@@ -43,34 +47,46 @@ var windowXOffset = window.screenX; // Window distance from screen (0,0)
 var windowYOffset = window.screenY; 
 var totalXOffset = null; // Difference between document (0,0) and screen pixel (0,0)
 var totalYOffset = null; 
-var browserXOffset = null; // Distance from side/top of window to document
-var browserYOffset = null;
 
-var recalibrationInterval;
+var lastTarget = null; // Last observerd DOM element
+var lastIdentifier = null; // Identifier of last observed element
+var gazeStart = Date.now(); // Timestamp of when observation of the element began
+var lastGaze = Date.now(); // For page tracking, when was the last time 
+
+var recalibrationInterval = null;
+var pageViewInterval;
+
+var tracked = isTracked(window.location.hostname);
 
 addAllListeners();
 
-// This listener will cancel itself upon completion
-document.body.addEventListener('mousemove', calibrate);
-
-// COMMENT OUT WHEN USING TRACKER - Reports mouse moves as gazes
-//document.body.addEventListener('mousemove', function(event) {
-//	imposterGazeEvent(event.clientX, event.clientY);
-//});
-
-// If the page is no longer visible, end the last gaze event
-document.addEventListener('visibilitychange', function(event) {
-	if(document.hidden) {
-		handleGazeEvent(null, null);
-	}
-});
+if(!tracked) {
+	setPageViewInterval();
+}
 
 // Listen for coordinates from background.js, report when nesessary
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
-		var result = checkForTargetChange(request['x'], request['y'], request['zoom']);
-		if(result) {
-			chrome.runtime.sendMessage(result);
+		var x = request['x'];
+		var y = request['y'];
+		var zoom = request['zoom'];
+		if(!mouseInput) {
+			x = Math.round((x - totalXOffset)/zoom);
+			y = Math.round((y - totalYOffset)/zoom);
+		}
+		if(tracked) {
+			var result = checkForTargetChange(x, y, zoom);
+			if(result) {
+				chrome.runtime.sendMessage(result);
+			}
+		} else {
+			if(!pageViewInterval) {
+				setPageViewInterval();
+				gazeStart = Date.now();
+			}
+			if(isViewed(x, y)) {
+				lastGaze = Date.now();
+			}
 		}
 	}
 });
@@ -79,8 +95,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 function calibrate(event) {
 	totalXOffset = event.screenX - event.clientX;
 	totalYOffset = event.screenY - event.clientY;
-	browserXOffset = totalXOffset - windowXOffset;
-	browserYOffset = totalYOffset - windowYOffset;
 	console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
 	recalibrationInterval = setInterval(function() { recalibrate() }, 1000);
 	// Remove this listener
@@ -103,19 +117,52 @@ function recalibrate() {
 	}
 }
 
-/*************************
-Event Monitoring Functions
-*************************/
+function setPageViewInterval() {
+	pageViewInterval = setInterval(function(){
+		if(Date.now() - lastGaze > 1500) {
+			console.log(pageViewObject());
+			clearInterval(pageViewInterval);
+			pageViewInterval = null;
+		}
+	}, 1500); 
+}
 
 // Just throw all the listeners on the document, the Big Brother approach to listeners
 function addAllListeners() {
+	// Listeners for target events
 	document.addEventListener('click', genericEventHandler);
 	document.addEventListener('dblclick', genericEventHandler);
 	document.addEventListener('cut', genericEventHandler);
 	document.addEventListener('copy', genericEventHandler);
 	document.addEventListener('paste', genericEventHandler);
 	document.addEventListener('contextmenu', genericEventHandler);
+
+	// Do initial calibration
+	document.body.addEventListener('mousemove', calibrate);
+
+	if(mouseInput) {
+		document.body.addEventListener('mousemove', function(event) {
+			imposterGazeEvent(event.clientX, event.clientY);
+		});
+	}
+
+	if(tracked) {
+		// If the page is no longer visible, end the last gaze event
+		document.addEventListener('visibilitychange', function(event) {
+			if(document.hidden) {
+				handleGazeEvent(null, null);
+			}
+		});		
+	} else {
+		window.addEventListener('beforeunload', function(event){
+			console.log(pageViewObject());
+		})
+	}
 }
+
+/*************************
+Event Monitoring Functions
+*************************/
 
 // Handles any 'addEventListener' style events
 function genericEventHandler(event) {
@@ -143,17 +190,9 @@ function eventInteractionObject(type, target) {
 Gaze Monitoring Functions
 ************************/
 
-var lastTarget = null; // Last observerd DOM element
-var lastIdentifier = null; // Identifier of last observed element
-var gazeStart = Date.now(); // Timestamp of when observation of the element began
-
 // Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
 function checkForTargetChange(x, y, zoom) {
-	var adjustedX = Math.round((x - totalXOffset)/zoom);
-	var adjustedY = Math.round((y - totalYOffset)/zoom);
-	// TOGGLE FOLLOWING TWO LINES FOR MOUSE OR EYE INPUT
-	//var viewed = document.elementFromPoint(x, y);
-	var viewed = document.elementFromPoint(adjustedX, adjustedY);
+	var viewed = document.elementFromPoint(x, y);
 	var targettedIdentifier = null;
 	var targettedElement = null;
 
@@ -202,6 +241,10 @@ function getTargetDescription(key, elem) {
 	}
 }
 
+function isViewed(x, y) {
+	return document.elementFromPoint(x, y) !== null;
+}
+
 // Object creating funciton just for cleanliness
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
@@ -212,6 +255,16 @@ function gazeInteractionObject(target, start, end) {
 	obj['duration'] = end - start;
 	obj['pageTitle'] = document.title;
 	obj['pageHref'] = window.location.href;
+	return obj;
+}
+
+function pageViewObject() {
+	var obj = {};
+	obj['type'] = 'pageView';
+	obj['timestamp'] = gazeStart;
+	obj['timestampEnd'] = lastGaze;
+	obj['duration'] = lastGaze - gazeStart;
+	obj['domain'] = window.location.hostname;
 	return obj;
 }
 
@@ -228,9 +281,9 @@ function handleGazeEvent(newElement, newIdentifier) {
 	gazeStart = gazeEnd;
 }
 
-/*************
+/**************
 Other Functions
-*************/
+**************/
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function imposterGazeEvent(xPos, yPos) {
@@ -240,4 +293,13 @@ function imposterGazeEvent(xPos, yPos) {
 		'timestamp': Date.now()
 	};
 	chrome.runtime.sendMessage(obj);
+}
+
+function isTracked(domain) {
+	for(var d of domains) {
+		if(domain.includes(d)) {
+			return true;
+		}
+	}
+	return false;
 }

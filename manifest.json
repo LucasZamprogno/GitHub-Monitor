@@ -17,7 +17,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://github.com/*", "https://stackoverflow.com/questions/*"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["jquery.js", "contentScript.js"]
     }
   ]
