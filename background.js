@@ -5,13 +5,15 @@ var PORT = 4321;
 // Short-circuit first time startup
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
+(typeof localStorage['privateMode'] === 'undefined') && setLocal('privateMode', false);
 
-var reporting;
+var reporting = getLocal('reporting');
 var sessionId = getLocal('sessionId');
+var privateMode = getLocal('privateMode');
 var ws;
 var attemptConnection = setInterval(function(){ connectToTracker() }, 100);
 
-if(getLocal('reporting')) {
+if(reporting) {
 	startReporting();
 }
 
@@ -58,6 +60,12 @@ function getLocal(key) {
 			} else {
 				return val;
 			}
+		case 'privateMode':
+			if(val === 'false') {
+				return false;
+			} else {
+				return true;
+			}
 	}
 }
 
@@ -95,10 +103,17 @@ function sendCoordToActiveTabs(x, y) {
 
 // Add on session ID and send event to the server
 function postDataToServer(data) {
-	console.log('POSTing to server');
+	if(privateMode) {
+		data = privacyFilter(data);
+	}
 	data['id'] = sessionId;
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
 	xmlhttp.setRequestHeader('Content-Type', 'application/json');
 	xmlhttp.send(JSON.stringify(data));
+}
+
+function privacyFilter(obj) {
+	// TODO Make this do anything
+	return obj;
 }
