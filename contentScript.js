@@ -120,7 +120,7 @@ function recalibrate() {
 function setPageViewInterval() {
 	pageViewInterval = setInterval(function(){
 		if(Date.now() - lastGaze > 1500) {
-			console.log(pageViewObject());
+			chrome.runtime.sendMessage(pageViewObject());
 			clearInterval(pageViewInterval);
 			pageViewInterval = null;
 		}
@@ -155,7 +155,7 @@ function addAllListeners() {
 		});		
 	} else {
 		window.addEventListener('beforeunload', function(event){
-			console.log(pageViewObject());
+			chrome.runtime.sendMessage(pageViewObject());
 		})
 	}
 }
