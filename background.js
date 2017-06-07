@@ -15,6 +15,11 @@ var attemptConnection = setInterval(function(){ connectToTracker() }, 100);
 
 if(reporting) {
 	startReporting();
+	chrome.browserAction.setBadgeBackgroundColor({'color':[0, 170, 0, 255]});
+	chrome.browserAction.setBadgeText({'text':'On'});
+} else {
+	chrome.browserAction.setBadgeBackgroundColor({'color':[170, 0, 0, 255]});
+	chrome.browserAction.setBadgeText({'text':'Off'});
 }
 
 // Pass data from content scripts on to server OR pass mouse coordinates back to scripts
@@ -79,6 +84,8 @@ function clearLocal(key) {
 
 function startReporting() {
 	if(sessionId) {
+		chrome.browserAction.setBadgeBackgroundColor({'color':[0, 170, 0, 255]});
+		chrome.browserAction.setBadgeText({'text':'On'});
 		reporting = true;
 		setLocal('reporting', true);
 	} else {
@@ -87,6 +94,8 @@ function startReporting() {
 }
 
 function stopReporting() {
+	chrome.browserAction.setBadgeBackgroundColor({'color':[170, 0, 0, 255]});
+	chrome.browserAction.setBadgeText({'text':'Off'});
 	reporting = false;
 	setLocal('reporting', false);
 }

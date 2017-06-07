@@ -1,18 +1,9 @@
 $(document).ready(function() {
-	// Check background status
-	var statusElement = $('p > span#status');
 	var sessionElement = $('p > span#session-id');
 	var bg = chrome.extension.getBackgroundPage();
 
 	if(bg.sessionId) {
-		console.log(typeof bg.sessionId);
 		sessionElement.text(bg.sessionId);
-	}
-
-	if(bg.reporting) {
-		statusElement.text('Running');
-	} else {
-		statusElement.text('Stopped');
 	}
 
 	if(bg.privateMode) {
