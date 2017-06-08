@@ -1,4 +1,7 @@
 var PORT = 4321;
+var GAZE_LOSS_TIMEOUT = 500;
+var GAZE_LOSS_WAIT = 100;
+var CONNECTION_WAIT = 100;
 
 // ALL LOCAL STORAGE SAVES AS STRING
 
@@ -11,7 +14,9 @@ var reporting = getLocal('reporting');
 var sessionId = getLocal('sessionId');
 var privateMode = getLocal('privateMode');
 var ws;
-var attemptConnection = setInterval(function(){ connectToTracker() }, 100);
+var attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
+var gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
+var lastCommunication = null;
 
 if(reporting) {
 	startReporting();
@@ -21,6 +26,7 @@ if(reporting) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(sender.tab && reporting) {
 		if(request.hasOwnProperty('x')) {
+			lastCommunication = Date.now();
 			sendCoordToActiveTabs(request['x'], request['y']);
 		} else {
 			postDataToServer(request);
@@ -30,8 +36,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 function connectToTracker() {
 	ws = new WebSocket('ws://localhost:2366');
-	clearInterval(attemptConnection);
+	clearInterval(attemptConnectionInterval);
 	ws.onmessage = function(e) {
+		lastCommunication = Date.now();
 		var obj = JSON.parse(e.data);
 		var x = obj['x'];
 		var y = obj['y'];
@@ -39,7 +46,7 @@ function connectToTracker() {
 	}
 	ws.onclose = function(e) {
 		ws = null;
-		attemptConnection = setInterval(function(){ connectToTracker() }, 100);
+		attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
 	}
 }
 
@@ -91,6 +98,16 @@ function stopReporting() {
 	setLocal('reporting', false);
 }
 
+function checkForGazeLoss() {
+	if(lastCommunication !== null && (Date.now() - lastCommunication > GAZE_LOSS_TIMEOUT)) {
+		chrome.tabs.query({active: true}, function(tabs) {
+			for(var tab of tabs) {
+				chrome.tabs.sendMessage(tab.id, {'gazeLoss': null});
+			}
+		});
+	}
+}
+
 function sendCoordToActiveTabs(x, y) {
 	chrome.tabs.query({active: true}, function(tabs) {
 		for(var tab of tabs) {
@@ -98,7 +115,7 @@ function sendCoordToActiveTabs(x, y) {
 				chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y, 'zoom': ratio});
 			});
 		}
-	})
+	});
 }
 
 // Add on session ID and send event to the server

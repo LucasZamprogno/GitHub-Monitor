@@ -88,6 +88,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 				lastGaze = Date.now();
 			}
 		}
+	} else if(request.hasOwnProperty('gazeLoss')) {
+		handleGazeEvent(null, null);
 	}
 });
 
