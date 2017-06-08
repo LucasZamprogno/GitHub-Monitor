@@ -4,6 +4,8 @@ $(document).ready(function() {
 
 	if(bg.sessionId) {
 		sessionElement.text(bg.sessionId);
+		$('button#start').css('visibility', 'visible');
+		$('button#stop').css('visibility', 'visible');
 	}
 
 	if(bg.privateMode) {
@@ -16,6 +18,8 @@ $(document).ready(function() {
 		sessionElement.text(session);
 		bg.sessionId = session;
 		bg.setLocal('sessionId', session);
+		$('button#start').css('visibility', 'visible');
+		$('button#stop').css('visibility', 'visible');
 	});
 
 	$('button#start').click(function(e) {
