@@ -8,14 +8,13 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div.file-wrap': 'Repo file explorer',
 	'div#readme': 'Repo README',
 	'div.overall-summary': 'Repo header (Commits, branches, etc.)',
-		// Figure out how to do branch list
+	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
 	// Commits
 	'li.commit': 'Special case, won\'t see this', // Would be cool to identify if they are looking at the commit name or id
 	'div.full-commit': 'Commit header',
 	'div.file': 'Special case, won\'t see this',
-	'div#all_commit_comments': 'Commit comment section',
 	// Issues + Pull requests
-		// Figure out how to do filters
+	'div.subnav > div.subnav-spacer-right': 'Issue/Pull request filters',
 	'div.table-list-header': 'Issue/Pull request dropdown menus',
 	'li.js-issue-row': 'Special case, won\'t see this',
 	// Single issue + pull request comments
@@ -161,6 +160,7 @@ function addAllListeners() {
 		})
 	}
 }
+
 
 /*************************
 Event Monitoring Functions
