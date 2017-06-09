@@ -1,5 +1,6 @@
 var domains = ['github', 'stackoverflow', 'google'];
-var mouseInput = true;
+var mouseInput = false;
+var MUTATION_TIMEOUT = 200;
 var targets = { // Keys are target identifiers, values are descriptors
 // GITHUB
 	// Main repo page/general
@@ -24,7 +25,7 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div.comment': 'Issue/Pull request comment',
 	'div.discussion-item': 'Pull request discussion item', // Maybe expand this?
 	'div.pull-merging': 'Pull request merge status',
-	'form.js-new-comment-form': 'Issue/Pull request comment box',
+	'form.js-new-comment-form': 'New comment form',
 	// Pull request files
 	'div.pull-request-review-menu': 'Pull request change review menu',
 // STACKOVERFLOW QUESTION
@@ -54,6 +55,8 @@ var lastGaze = Date.now(); // For page tracking, when was the last time
 
 var recalibrationInterval = null;
 var pageViewInterval;
+
+var mouseListenerTimeout = null;
 
 var tracked = isTracked(window.location.hostname);
 
@@ -137,6 +140,7 @@ function addAllListeners() {
 	document.addEventListener('copy', genericEventHandler);
 	document.addEventListener('paste', genericEventHandler);
 	document.addEventListener('contextmenu', genericEventHandler);
+	addMouseListeners();
 
 	// Do initial calibration
 	document.body.addEventListener('mousemove', calibrate);
@@ -158,6 +162,39 @@ function addAllListeners() {
 		window.addEventListener('beforeunload', function(event){
 			chrome.runtime.sendMessage(pageViewObject());
 		})
+	}
+
+	var observer = new MutationObserver(function(mutations) {
+		if(mouseListenerTimeout === null) { // First change in a while? Set the timer
+			mouseListenerTimeout = setTimeout(function(){
+				addMouseListeners();
+				mouseListenerTimeout = null;
+			}, MUTATION_TIMEOUT);
+		} else { // Timer running? Clear it and set a new one
+			clearTimeout(mouseListenerTimeout);
+			mouseListenerTimeout = setTimeout(function(){
+				addMouseListeners();
+				mouseListenerTimeout = null;
+			}, MUTATION_TIMEOUT);
+		}
+	});
+
+	var config = {
+		subtree: true,
+		attributes: true
+	};
+
+	observer.observe(document, config);
+}
+
+function addMouseListeners() {
+	for(var identifier of Object.keys(targets)) {
+		var found = $(identifier);
+		for(var item of found) {
+			item.addEventListener('mouseenter', genericEventHandler);
+			item.addEventListener('mouseleave', genericEventHandler);
+			console.log('adding listener to ' + identifier);
+		}
 	}
 }
 
