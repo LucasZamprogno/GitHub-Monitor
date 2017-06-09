@@ -29,7 +29,7 @@ if(reporting) {
 
 // Pass data from content scripts on to server OR pass mouse coordinates back to scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if(sender.tab && reporting) {
+	if(reporting) {
 		if(request.hasOwnProperty('x')) {
 			lastCommunication = Date.now();
 			sendCoordToActiveTabs(request['x'], request['y']);
@@ -129,14 +129,16 @@ function sendCoordToActiveTabs(x, y) {
 
 // Add on session ID and send event to the server
 function postDataToServer(data) {
-	if(privateMode) {
-		data = privacyFilter(data);
+	if(reporting) {
+		if(privateMode) {
+			data = privacyFilter(data);
+		}
+		data['id'] = sessionId;
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
+		xmlhttp.setRequestHeader('Content-Type', 'application/json');
+		xmlhttp.send(JSON.stringify(data));
 	}
-	data['id'] = sessionId;
-	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
-	xmlhttp.setRequestHeader('Content-Type', 'application/json');
-	xmlhttp.send(JSON.stringify(data));
 }
 
 function privacyFilter(obj) {

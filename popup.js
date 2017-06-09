@@ -1,9 +1,8 @@
 $(document).ready(function() {
-	var sessionElement = $('p > span#session-id');
 	var bg = chrome.extension.getBackgroundPage();
 
 	if(bg.sessionId) {
-		sessionElement.text(bg.sessionId);
+		$('p > span#session-id').text(bg.sessionId);
 		$('button#start').css('visibility', 'visible');
 		$('button#stop').css('visibility', 'visible');
 	}
@@ -15,7 +14,7 @@ $(document).ready(function() {
 	$('button#set-session').click(function(e) {
 		e.preventDefault();
 		var session = $('input#session-field').val();
-		sessionElement.text(session);
+		$('p > span#session-id').text(session);
 		bg.sessionId = session;
 		bg.setLocal('sessionId', session);
 		$('button#start').css('visibility', 'visible');
@@ -38,5 +37,16 @@ $(document).ready(function() {
 		var state = $('input#private-mode').is(':checked');
 		bg.privateMode = state;
 		bg.setLocal('privateMode', state);
-	})
+	});
+
+	$('button#report-button').click(function(e) {
+		e.preventDefault();
+		var obj = {
+			'type': 'comment',
+			'timestamp': Date.now(),
+			'message': $('textarea#report-area').val()
+		};
+		$('textarea#report-area').val('');
+		chrome.runtime.sendMessage(obj);
+	});
 })
