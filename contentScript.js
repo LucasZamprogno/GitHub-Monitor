@@ -193,7 +193,6 @@ function addMouseListeners() {
 		for(var item of found) {
 			item.addEventListener('mouseenter', genericEventHandler);
 			item.addEventListener('mouseleave', genericEventHandler);
-			console.log('adding listener to ' + identifier);
 		}
 	}
 }
