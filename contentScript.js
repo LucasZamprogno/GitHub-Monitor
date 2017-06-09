@@ -34,9 +34,9 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div.comments': 'Comments',
 	'td.answercell': 'Answer',
 // GOOGLE
-	'div.sbdd_a': 'Search field',
-	'div.sbibtd': 'Search suggestions',
-	'div.g': 'Search result' // This could be made specific but that might put a lot of people off of using high detail mode
+	'div.sbibtd': 'Search field',
+	'div.sbdd_a': 'Search suggestions',
+	'div.g': 'Special case, won\'t see this' // This could be made specific but that might put a lot of people off of using high detail mode
 };
 
 /******************
@@ -273,6 +273,10 @@ function getTargetDescription(key, elem) {
 			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
 			var numberStr = $.trim(spanContent).split('\n')[0];
 			return 'Issue/Pull request: ' + numberStr + ', \'' + title + '\'';
+		case 'div.g':
+			var link = $(elem).find('div > div.rc > h3.r > a').text();
+			link = $.trim(link);
+			return 'Google result: ' + link;
 		default: // Used assigned label mapping in 'targets' global
 			return targets[key];
 			break;
