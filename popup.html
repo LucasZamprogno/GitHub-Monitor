@@ -2,27 +2,49 @@
 <html>
 	<head>
 		<title>Monitor</title>
-		<script type='text/javascript' src='jquery.js'></script>
+		<link rel="stylesheet" type="text/css" href="jquery-ui/jquery-ui.min.css">
+		<script src='jquery-ui/external/jquery/jquery.js'></script>
+		<script src="jquery-ui/jquery-ui.min.js"></script>
 		<script src='popup.js'></script>
 		<style type="text/css">
+			body {
+				width: 250px;
+			}
 			#start {
-				visibility: hidden;
+				display: none;
 			}
 			#stop {
-				visibility: hidden;
+				display: none;
 			}
 		</style>
 	</head>
 	<body>
-		<p id='id-string'>ID: <span id='session-id'>N/A</span></p>
-		<button id='set-session'>Set</button>
-		<input type='text' name='session' id='session-field'>
-		<input type='checkbox' id='private-mode'>
-		<label for='private-mode'>Private mode</label><br>
-		<button id='start'>Start monitor</button>
-		<button id='stop'>Stop monitor</button>
-		<p id='report-header'>Self report box</p>
-		<textarea id='report-area'></textarea>
-		<button id='report-button'>Send</button>
+		<div id='tabs'>
+			<ul>
+				<li><a href="#tab1">Main</a></li>
+				<li><a href="#tab2">Settings</a></li>
+			</ul>
+			<div id='tab1'>
+				<p id='id-string'>ID: <span id='session-id'>N/A</span></p>
+				<input type='text' name='session' id='session-field'>
+				<button id='set-session'>Set</button><br><br>
+				<button id='start'>Start monitor</button>
+				<button id='stop'>Stop monitor</button>
+				<p id='report-header'>Self report box</p>
+				<textarea id='report-area'></textarea><br>
+				<button id='report-button'>Send</button>
+			</div>
+			<div id='tab2'>
+				<input type='checkbox' id='private-mode'>
+				<label for='private-mode'>Hide certain details</label><br>
+				<p>Details to hide:</p>
+				<input type='checkbox' class='privacy' id='google'>
+				<label for ='google'>Google results</label><br>
+				<input type='checkbox' class='privacy' id='domains'>
+				<label for ='domains'>Global domain level reporting</label><br>
+				<input type='checkbox' class='privacy' id='processes'>
+				<label for ='processes'>Running processes (N/A)</label><br>
+			</div>
+		</div>
 	</body>
 </html>

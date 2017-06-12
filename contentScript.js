@@ -1,5 +1,5 @@
 var domains = ['github', 'stackoverflow', 'google'];
-var mouseInput = false;
+var mouseInput = true;
 var MUTATION_TIMEOUT = 200;
 var targets = { // Keys are target identifiers, values are descriptors
 // GITHUB

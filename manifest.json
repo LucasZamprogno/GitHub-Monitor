@@ -18,7 +18,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["jquery.js", "contentScript.js"]
+      "js": ["jquery-ui/external/jquery/jquery.js", "contentScript.js"]
     }
   ]
 }

@@ -9,10 +9,12 @@ var CONNECTION_WAIT = 100;
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
 (typeof localStorage['privateMode'] === 'undefined') && setLocal('privateMode', false);
+(typeof localStorage['privacyFilters'] === 'undefined') && setLocal('privacyFilters', JSON.stringify([]));
 
 var reporting = getLocal('reporting');
 var sessionId = getLocal('sessionId');
 var privateMode = getLocal('privateMode');
+var privacyFilters = getLocal('privacyFilters');
 var ws;
 var attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
 var gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
@@ -78,6 +80,8 @@ function getLocal(key) {
 			} else {
 				return true;
 			}
+		case 'privacyFilters':
+			return JSON.parse(val);
 	}
 }
 
@@ -107,6 +111,11 @@ function stopReporting() {
 	setLocal('reporting', false);
 }
 
+function updatePrivacySettings(arrStr) {
+	privacyFilters = JSON.parse(arrStr);
+	setLocal('privacyFilters', arrStr);
+}
+
 function checkForGazeLoss() {
 	if(lastCommunication !== null && (Date.now() - lastCommunication > GAZE_LOSS_TIMEOUT)) {
 		chrome.tabs.query({active: true}, function(tabs) {
@@ -133,15 +142,33 @@ function postDataToServer(data) {
 		if(privateMode) {
 			data = privacyFilter(data);
 		}
-		data['id'] = sessionId;
-		var xmlhttp = new XMLHttpRequest();
-		xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
-		xmlhttp.setRequestHeader('Content-Type', 'application/json');
-		xmlhttp.send(JSON.stringify(data));
+		if(data) {
+			data['id'] = sessionId;
+			var xmlhttp = new XMLHttpRequest();
+			xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
+			xmlhttp.setRequestHeader('Content-Type', 'application/json');
+			xmlhttp.send(JSON.stringify(data));
+		}
 	}
 }
 
 function privacyFilter(obj) {
-	// TODO Make this do anything
+	for(var filter of privacyFilters) {
+		switch(filter) {
+			case 'google':
+				if(obj['pageHref'] && obj['pageHref'].includes('www.google.') && obj['target'].includes('Google result:')) {
+					obj['target'] = 'Google result';
+				}
+				break;
+			case 'domains':
+				if(obj['domain']) {
+					return null;
+				}
+				break;
+			case 'processes':
+				//
+				break;
+		}
+	}
 	return obj;
 }
