@@ -3,41 +3,39 @@ var mouseInput = true;
 var MUTATION_TIMEOUT = 200;
 var PAGE_VIEW_TIME = 500;
 var targets = { // Keys are target identifiers, values are descriptors
-// GITHUB
-	// Main repo page/general
+	// Common github elements
 	'div.header': 'Main github header',
 	'div.repohead': 'Repo header',
+	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
+	'div.file': 'Special case, won\'t see this',
+	'div.comment': 'Comment',
+	'form.js-new-comment-form': 'New comment form',
+	// Main repo page
 	'div.file-wrap': 'Repo file explorer',
 	'div#readme': 'Repo README',
-	'div.overall-summary': 'Repo header (Commits, branches, etc.)',
-	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
+	'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)',
 	// Commits
 	'li.commit': 'Special case, won\'t see this', // Would be cool to identify if they are looking at the commit name or id
 	'div.full-commit': 'Commit header',
-	'div.file': 'Special case, won\'t see this',
 	// Issues + Pull requests
 	'div.subnav > div.subnav-spacer-right': 'Issue/Pull request filters',
 	'div.table-list-header': 'Issue/Pull request dropdown menus',
 	'li.js-issue-row': 'Special case, won\'t see this',
-	// Single issue + pull request comments
 	'div.new-issue-form > div.discussion-timeline': 'New issue form title and comment',
 	'div#partial-discussion-header': 'Issue/Pull request header',
 	'div.discussion-sidebar': 'Issue/Pull request sidebar',
-	'div.comment': 'Issue/Pull request comment',
 	'div.discussion-item': 'Pull request discussion item', // Maybe expand this?
 	'div.pull-merging': 'Pull request merge status',
-	'form.js-new-comment-form': 'New comment form',
-	// Pull request files
 	'div.pull-request-review-menu': 'Pull request change review menu',
-// STACKOVERFLOW QUESTION
+	// Stackoverflow question
 	'div#question-header': 'Question title',
 	'td.postcell': 'Question body',
 	'div.comments': 'Comments',
 	'td.answercell': 'Answer',
-// GOOGLE
+	// Google search results
 	'div.sbibtd': 'Search field',
 	'div.sbdd_a': 'Search suggestions',
-	'div.g': 'Special case, won\'t see this' // This could be made specific but that might put a lot of people off of using high detail mode
+	'div.g': 'Special case, won\'t see this'
 };
 
 /******************
@@ -55,7 +53,7 @@ var gazeStart = Date.now(); // Timestamp of when observation of the element bega
 var lastGaze = Date.now(); // For page tracking, when was the last time 
 
 var recalibrationInterval = null; // How often to check for a window move, starts after first calibration
-var pageViewInterval = null; // How 
+var pageViewInterval = null; // How often to check if the user has been looking away from the page
 
 var mouseListenerTimeout = null;
 
@@ -123,7 +121,7 @@ function recalibrate() {
 	}
 }
 
-// This should be replaced by using a gazeLoss event from background.js
+// How often to check if the user has been looking away from the page
 function setPageViewInterval() {
 	pageViewInterval = setInterval(function(){
 		if(Date.now() - lastGaze > PAGE_VIEW_TIME) {
