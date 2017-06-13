@@ -1,11 +1,12 @@
-var PORT = 4321;
-var GAZE_LOSS_TIMEOUT = 500;
-var GAZE_LOSS_WAIT = 100;
-var CONNECTION_WAIT = 100;
+var SERVER_PORT = 4321; // Main server port
+var WEBSOCKET_PORT = 2366; // Tobii app websocket port
+var GAZE_LOSS_TIMEOUT = 500; // How much time can pass before deciding the user has looked/moved away
+var GAZE_LOSS_WAIT = 100; // How often to check if the user has looked/moved away
+var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app websocket server
 
-// ALL LOCAL STORAGE SAVES AS STRING
+// Note: All values stored in localStorage are always stored as strings. May be converted implicitly.
 
-// Short-circuit first time startup
+// Short-circuit first time setup. Should only ever happen after initial install
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
 (typeof localStorage['privateMode'] === 'undefined') && setLocal('privateMode', false);
@@ -22,17 +23,14 @@ var lastCommunication = null;
 
 if(reporting) {
 	startReporting();
-	chrome.browserAction.setBadgeBackgroundColor({'color':[0, 170, 0, 255]});
-	chrome.browserAction.setBadgeText({'text':'On'});
 } else {
-	chrome.browserAction.setBadgeBackgroundColor({'color':[170, 0, 0, 255]});
-	chrome.browserAction.setBadgeText({'text':'Off'});
+	stopReporting()
 }
 
 // Pass data from content scripts on to server OR pass mouse coordinates back to scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(reporting) {
-		if(request.hasOwnProperty('x')) {
+		if(request.hasOwnProperty('x')) { // This is only for mouse input for development
 			lastCommunication = Date.now();
 			sendCoordToActiveTabs(request['x'], request['y']);
 		} else {
@@ -41,8 +39,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	}
 });
 
+// Connect to Tobii app websocket server
 function connectToTracker() {
-	ws = new WebSocket('ws://localhost:2366');
+	ws = new WebSocket('ws://localhost:' + WEBSOCKET_PORT);
 	clearInterval(attemptConnectionInterval);
 	ws.onmessage = function(e) {
 		lastCommunication = Date.now();
@@ -85,16 +84,14 @@ function getLocal(key) {
 	}
 }
 
+// Save a key value pair to local storage for persistence between sessions
 function setLocal(key, val) {
 	localStorage[key] = val;
 }
 
-function clearLocal(key) {
-	localStorage[key] = null;
-}
-
+// Allow reporting of events to the server, set icon accordingly
 function startReporting() {
-	if(sessionId) {
+	if(sessionId) { // Hopefully not possible for sessionId to not be set, but just in case
 		chrome.browserAction.setBadgeBackgroundColor({'color':[0, 170, 0, 255]});
 		chrome.browserAction.setBadgeText({'text':'On'});
 		reporting = true;
@@ -104,6 +101,7 @@ function startReporting() {
 	}
 }
 
+// Prevent reporting to the server, set icon accordingly
 function stopReporting() {
 	chrome.browserAction.setBadgeBackgroundColor({'color':[170, 0, 0, 255]});
 	chrome.browserAction.setBadgeText({'text':'Off'});
@@ -111,11 +109,14 @@ function stopReporting() {
 	setLocal('reporting', false);
 }
 
+// Takes a string of the details selected in the popup that will not be reported on
 function updatePrivacySettings(arrStr) {
 	privacyFilters = JSON.parse(arrStr);
 	setLocal('privacyFilters', arrStr);
 }
 
+// Has there been no gaze data reported from the tracker for a given amount of time
+// (i.e. user looked/moved away from screen)
 function checkForGazeLoss() {
 	if(lastCommunication !== null && (Date.now() - lastCommunication > GAZE_LOSS_TIMEOUT)) {
 		chrome.tabs.query({active: true}, function(tabs) {
@@ -126,6 +127,7 @@ function checkForGazeLoss() {
 	}
 }
 
+// Pass on the x and y coordinates to all active (the single viewable tab in a given window) tabs
 function sendCoordToActiveTabs(x, y) {
 	chrome.tabs.query({active: true}, function(tabs) {
 		for(var tab of tabs) {
@@ -142,16 +144,17 @@ function postDataToServer(data) {
 		if(privateMode) {
 			data = privacyFilter(data);
 		}
-		if(data) {
+		if(data) { // Data will be null if it shouldn't be reported at all
 			data['id'] = sessionId;
 			var xmlhttp = new XMLHttpRequest();
-			xmlhttp.open('POST', 'http://localhost:' + PORT + '/data');
+			xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
 			xmlhttp.setRequestHeader('Content-Type', 'application/json');
 			xmlhttp.send(JSON.stringify(data));
 		}
 	}
 }
 
+// Substitute any unwanted information, or return null if the event should not be reported at all
 function privacyFilter(obj) {
 	for(var filter of privacyFilters) {
 		switch(filter) {

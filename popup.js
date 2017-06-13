@@ -3,6 +3,7 @@ $(document).ready(function() {
 
 	$('#tabs').tabs();
 
+	// Make all info in the popup up to date with saved data
 	if(bg.sessionId) {
 		$('p > span#session-id').text(bg.sessionId);
 		$('button#start').css('display', 'inline');
@@ -27,6 +28,7 @@ $(document).ready(function() {
 		$('button#stop').css('display', 'inline');
 	});
 
+	// Click handlers
 	$('button#start').click(function(e) {
 		e.preventDefault();
 		bg.startReporting();
@@ -61,7 +63,6 @@ $(document).ready(function() {
 				checked.push($(this).attr('id'))
 			}
 		})
-		console.log(JSON.stringify(checked));
 		bg.updatePrivacySettings(JSON.stringify(checked));
 	})
 })

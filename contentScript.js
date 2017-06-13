@@ -1,6 +1,7 @@
 var domains = ['github', 'stackoverflow', 'google'];
 var mouseInput = true;
 var MUTATION_TIMEOUT = 200;
+var PAGE_VIEW_TIME = 500;
 var targets = { // Keys are target identifiers, values are descriptors
 // GITHUB
 	// Main repo page/general
@@ -53,11 +54,12 @@ var lastIdentifier = null; // Identifier of last observed element
 var gazeStart = Date.now(); // Timestamp of when observation of the element began
 var lastGaze = Date.now(); // For page tracking, when was the last time 
 
-var recalibrationInterval = null;
-var pageViewInterval;
+var recalibrationInterval = null; // How often to check for a window move, starts after first calibration
+var pageViewInterval = null; // How 
 
 var mouseListenerTimeout = null;
 
+// Is this a page we have target HTML elements for
 var tracked = isTracked(window.location.hostname);
 
 addAllListeners();
@@ -121,14 +123,15 @@ function recalibrate() {
 	}
 }
 
+// This should be replaced by using a gazeLoss event from background.js
 function setPageViewInterval() {
 	pageViewInterval = setInterval(function(){
-		if(Date.now() - lastGaze > 1500) {
+		if(Date.now() - lastGaze > PAGE_VIEW_TIME) {
 			chrome.runtime.sendMessage(pageViewObject());
 			clearInterval(pageViewInterval);
 			pageViewInterval = null;
 		}
-	}, 1500); 
+	}, PAGE_VIEW_TIME); 
 }
 
 // Just throw all the listeners on the document, the Big Brother approach to listeners
@@ -164,6 +167,7 @@ function addAllListeners() {
 		})
 	}
 
+	// After 100ms of no mutations, attempt to add mouseenter/mouseleave listeners to targets
 	var observer = new MutationObserver(function(mutations) {
 		if(mouseListenerTimeout === null) { // First change in a while? Set the timer
 			mouseListenerTimeout = setTimeout(function(){
@@ -187,6 +191,7 @@ function addAllListeners() {
 	observer.observe(document, config);
 }
 
+// Add mouseenter/mouseleave listeners to any present targets
 function addMouseListeners() {
 	for(var identifier of Object.keys(targets)) {
 		var found = $(identifier);
@@ -244,7 +249,7 @@ function checkForTargetChange(x, y, zoom) {
 		}
 	}
 	
-	if(lastTarget && targettedElement) { // Past and current element are targets
+	if(lastTarget && targettedElement) { // Past and current element are both targets
 		if(!(lastTarget.is(targettedElement))) {
 			handleGazeEvent(targettedElement, targettedIdentifier);
 		} 
@@ -259,21 +264,21 @@ function getTargetDescription(key, elem) {
 		return 'Untracked';
 	}
 	switch(key) {
-		case 'div.file':
+		case 'div.file': // Get github file name
 			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
-		case 'li.commit':
+		case 'li.commit': // Get githuv commit id and title
 			var data = elem.attr('data-channel');
 			var split = data.split(':');
 			var commitID = split[split.length - 1];
 			var name = $(elem).find('p.commit-title > a').attr('title');
 			return 'Commit: id - ' + commitID + ', name - ' + name;
-		case 'li.js-issue-row':
+		case 'li.js-issue-row': // Get github issue name and number
 			var title = $(elem).find('div > div > a.h4').text();
 			title = $.trim(title);
 			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
 			var numberStr = $.trim(spanContent).split('\n')[0];
 			return 'Issue/Pull request: ' + numberStr + ', \'' + title + '\'';
-		case 'div.g':
+		case 'div.g': // Get google result name link name
 			var link = $(elem).find('div > div.rc > h3.r > a').text();
 			link = $.trim(link);
 			return 'Google result: ' + link;
@@ -283,11 +288,12 @@ function getTargetDescription(key, elem) {
 	}
 }
 
+// Is the gaze actually on the page?
 function isViewed(x, y) {
 	return document.elementFromPoint(x, y) !== null;
 }
 
-// Object creating funciton just for cleanliness
+// For gazes on a target
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
 	obj['type'] = 'gaze';
@@ -300,6 +306,7 @@ function gazeInteractionObject(target, start, end) {
 	return obj;
 }
 
+// For gazes on an untracked (no specified target elements) page
 function pageViewObject() {
 	var obj = {};
 	obj['type'] = 'pageView';
@@ -337,6 +344,7 @@ function imposterGazeEvent(xPos, yPos) {
 	chrome.runtime.sendMessage(obj);
 }
 
+// Is this page one that we have target elements for
 function isTracked(domain) {
 	for(var d of domains) {
 		if(domain.includes(d)) {
