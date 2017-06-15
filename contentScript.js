@@ -198,12 +198,22 @@ function addAllListeners() {
 // Add mouseenter/mouseleave listeners to any present targets
 function addMouseListeners() {
 	for(var identifier of Object.keys(targets)) {
+		// Ugly hardcoding. Don't add listeners to every line of code
+		if(identifier === 'table.diff-table > tbody > tr') {
+			continue;
+		}
 		var found = $(identifier);
 		for(var item of found) {
 			item.addEventListener('mouseenter', genericEventHandler);
 			item.addEventListener('mouseleave', genericEventHandler);
 		}
 	}
+	var files = $('div.file');
+	for(var item of files) {
+		item.addEventListener('mouseenter', fileMouseEventHandler);
+		item.addEventListener('mouseleave', fileMouseEventHandler);
+	}
+
 }
 
 /*************************
@@ -219,6 +229,11 @@ function genericEventHandler(event) {
 			chrome.runtime.sendMessage(obj);
 		}
 	}
+}
+
+function fileMouseEventHandler(event) {
+	var obj = eventInteractionObject(event.type, getTargetDescription('div.file', event.target));
+	chrome.runtime.sendMessage(obj);
 }
 
 // Object creating funciton just for cleanliness
@@ -276,14 +291,12 @@ function getTargetDescription(key, elem) {
 			var name = $(elem).find('p.commit-title > a').attr('title');
 			return 'Commit: id - ' + commitID + ', name - ' + name;
 		case 'li.js-issue-row': // Get github issue name and number
-			var title = $(elem).find('div > div > a.h4').text();
-			title = $.trim(title);
+			var title = $(elem).find('div > div > a.h4').text().trim();
 			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
-			var numberStr = $.trim(spanContent).split('\n')[0];
-			return 'Issue/Pull request: ' + numberStr + ', \'' + title + '\'';
+			var numberStr = spanContent.trim().split('\n')[0];
+			return 'Issue/Pull request: ' + numberStr + ', ' + title;
 		case 'div.g': // Get google result name link name
-			var link = $(elem).find('div > div.rc > h3.r > a').text();
-			link = $.trim(link);
+			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
 			return 'Google result: ' + link;
 		case 'table.diff-table > tbody > tr': // Diff code line
 			return getLineDetails(elem);
