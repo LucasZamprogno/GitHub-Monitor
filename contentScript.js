@@ -7,7 +7,7 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div.header': 'Main github header',
 	'div.repohead': 'Repo header',
 	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
-	'div.file': 'Special case, won\'t see this',
+	'table.diff-table > tbody > tr': 'Special case, won\'t see this',
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
 	// Main repo page
@@ -38,9 +38,9 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div.g': 'Special case, won\'t see this'
 };
 
-/******************
-Startup/Maintenance
-******************/
+/**************************
+Startup variables/listeners
+**************************/
 
 var windowXOffset = window.screenX; // Window distance from screen (0,0)
 var windowYOffset = window.screenY; 
@@ -57,43 +57,49 @@ var pageViewInterval = null; // How often to check if the user has been looking 
 
 var mouseListenerTimeout = null;
 
-// Is this a page we have target HTML elements for
-var tracked = isTracked(window.location.hostname);
+var tracked = isTracked(window.location.hostname); // Is this a page we have target HTML elements for
 
 addAllListeners();
+
+setMessageListener()
 
 if(!tracked) {
 	setPageViewInterval();
 }
 
+/****************
+Startup functions
+****************/
+
 // Listen for coordinates from background.js, report when nesessary
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
-		var x = request['x'];
-		var y = request['y'];
-		var zoom = request['zoom'];
-		if(!mouseInput) {
-			x = Math.round((x - totalXOffset)/zoom);
-			y = Math.round((y - totalYOffset)/zoom);
+function setMessageListener() {
+	chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+		// If the message has coordinates
+		if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
+			var x = request['x'];
+			var y = request['y'];
+			var zoom = request['zoom'];
+			if(!mouseInput) { // Comes from eyetracker
+				x = Math.round((x - totalXOffset)/zoom);
+				y = Math.round((y - totalYOffset)/zoom);
+			}
+			if(tracked) {
+				checkForTargetChange(x, y);
+			} else {
+				if(!pageViewInterval) {
+					setPageViewInterval();
+					gazeStart = Date.now();
+				}
+				// If the gaze falls on this page
+				if(document.elementFromPoint(x, y) !== null) {
+					lastGaze = Date.now();
+				}
+			}
+		} else if(request.hasOwnProperty('gazeLoss')) {
+			handleGazeEvent(null, null);
 		}
-		if(tracked) {
-			var result = checkForTargetChange(x, y, zoom);
-			if(result) {
-				chrome.runtime.sendMessage(result);
-			}
-		} else {
-			if(!pageViewInterval) {
-				setPageViewInterval();
-				gazeStart = Date.now();
-			}
-			if(isViewed(x, y)) {
-				lastGaze = Date.now();
-			}
-		}
-	} else if(request.hasOwnProperty('gazeLoss')) {
-		handleGazeEvent(null, null);
-	}
-});
+	});
+}
 
 // Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
 function calibrate(event) {
@@ -200,7 +206,6 @@ function addMouseListeners() {
 	}
 }
 
-
 /*************************
 Event Monitoring Functions
 *************************/
@@ -232,7 +237,7 @@ Gaze Monitoring Functions
 ************************/
 
 // Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
-function checkForTargetChange(x, y, zoom) {
+function checkForTargetChange(x, y) {
 	var viewed = document.elementFromPoint(x, y);
 	var targettedIdentifier = null;
 	var targettedElement = null;
@@ -280,15 +285,44 @@ function getTargetDescription(key, elem) {
 			var link = $(elem).find('div > div.rc > h3.r > a').text();
 			link = $.trim(link);
 			return 'Google result: ' + link;
+		case 'table.diff-table > tbody > tr': // Diff code line
+			return getLineDetails(elem);
 		default: // Used assigned label mapping in 'targets' global
 			return targets[key];
 			break;
 	}
 }
 
-// Is the gaze actually on the page?
-function isViewed(x, y) {
-	return document.elementFromPoint(x, y) !== null;
+function getLineDetails(elem) {
+	if(elem.hasClass('js-expandable-line')) {
+		return {'type': 'expandable code section'};
+	} else {
+		// Line nums will be null if not present (addition or deletion lines)
+		var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
+		var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
+		var codeElem = $(elem).find('td.blob-code');
+		var codeText = codeElem.find('span.blob-code-inner').text();
+		var type;
+		if(codeElem.hasClass('blob-code-context')) {
+			type = 'unchanged';
+			codeText = codeText.trim();
+		} else if(codeElem.hasClass('blob-code-addition')) {
+			type = 'addition';
+			codeText = codeText.substring(1).trim();
+		} else if(codeElem.hasClass('blob-code-deletion')) {
+			type = 'deletion';
+			codeText = codeText.substring(1).trim();
+		} else { // Hopefully shouldn't happen
+			type = 'unknown';
+			codeText = null;
+		}
+		return {
+			'type': type,
+			'oldLineNum': oldLineNum,
+			'newLineNum': newLineNum,
+			'codeText': codeText
+		}
+	}
 }
 
 // For gazes on a target

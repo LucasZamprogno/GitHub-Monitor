@@ -91,11 +91,20 @@ function setLocal(key, val) {
 
 // Allow reporting of events to the server, set icon accordingly
 function startReporting() {
+	var wasReporting = reporting;
 	if(sessionId) { // Hopefully not possible for sessionId to not be set, but just in case
 		chrome.browserAction.setBadgeBackgroundColor({'color':[0, 170, 0, 255]});
 		chrome.browserAction.setBadgeText({'text':'On'});
 		reporting = true;
 		setLocal('reporting', true);
+		if(!wasReporting) {
+			var obj = {
+				'type': 'setting',
+				'detail': 'Reporting - Started',
+				'timestamp': Date.now()
+			}
+			postDataToServer(obj);
+		}
 	} else {
 		stopReporting();
 	}
@@ -103,10 +112,20 @@ function startReporting() {
 
 // Prevent reporting to the server, set icon accordingly
 function stopReporting() {
+	var wasReporting = reporting;
 	chrome.browserAction.setBadgeBackgroundColor({'color':[170, 0, 0, 255]});
 	chrome.browserAction.setBadgeText({'text':'Off'});
 	reporting = false;
 	setLocal('reporting', false);
+	if(wasReporting) {
+		var obj = {
+			'type': 'setting',
+			'detail': 'Reporting - Stopped',
+			'timestamp': Date.now(),
+			'override': true
+		}
+		postDataToServer(obj);
+	}
 }
 
 // Takes a string of the details selected in the popup that will not be reported on
@@ -140,7 +159,7 @@ function sendCoordToActiveTabs(x, y) {
 
 // Add on session ID and send event to the server
 function postDataToServer(data) {
-	if(reporting) {
+	if(reporting || data.hasOwnProperty('override')) {
 		if(privateMode) {
 			data = privacyFilter(data);
 		}

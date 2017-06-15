@@ -43,6 +43,13 @@ $(document).ready(function() {
 		var state = $('input#private-mode').is(':checked');
 		bg.privateMode = state;
 		bg.setLocal('privateMode', state);
+		var obj = {
+			'type': 'setting',
+			'detail': 'Privacy setting - ' + state,
+			'timestamp': Date.now(),
+			'override': true
+		};
+		chrome.runtime.sendMessage(obj);
 	});
 
 	$('button#report-button').click(function(e) {
