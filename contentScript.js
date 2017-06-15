@@ -1,7 +1,7 @@
 var domains = ['github', 'stackoverflow', 'google'];
-var mouseInput = true;
-var MUTATION_TIMEOUT = 200;
-var PAGE_VIEW_TIME = 500;
+var mouseInput = false; // Using the mouse to fake gaze data?
+var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
+var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var targets = { // Keys are target identifiers, values are descriptors
 	// Common github elements
 	'div.header': 'Main github header',
