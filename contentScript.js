@@ -208,6 +208,7 @@ function addMouseListeners() {
 			item.addEventListener('mouseleave', genericEventHandler);
 		}
 	}
+	// Instead of each line of code, attempt to add to file containers
 	var files = $('div.file');
 	for(var item of files) {
 		item.addEventListener('mouseenter', fileMouseEventHandler);
