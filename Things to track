@@ -1,59 +1,78 @@
 GitHub
-Repo: https://github.com/*/*
-  Files (div.file-wrap, single fle is tr.js-navigation-item)
-  Readme (div#readme)
-  Metadata (commits, branches, etc) (div.overall-summary)
-  Branch list (see note 1)
-Commit list: https://github.com/*/*/commits/*
-  Branch list (see note 1)
-  Commit (li.commit)
-  Commit ID vs Name? (see note 2)
-  Commit:
-    Header
-    Code (div.file generally, each line is a <tr> broken up into three components. Doubt tracker has the accuracy to make much use of these)
-    Comments (div#all_commit_comments)
-Issue tracker: https://github.com/*/*/issues
-  Filters (see note 3)
-  Dropdowns (div.table-list-header)
-  Issues (see note 4 for generally, div.js-issue-row for specific)
-Issue: https://github.com/*/*/issues/*
-  Title (span.js-issue-title specifically, div#partial-discussion-header for the whole header (includes new issue button))
-  Options (div#partial-discussion-sidebar for the whole thing, div.discussion-sidebar-item for specific)
-  Comments (div.js-discussion for all, div.comment for one)
-  Comment box (div.timeline-new-comment)
-Pull requests: https://github.com/*/*/pulls AND https://github.com/pulls
-  Filters (see note 3)
-  Dropdowns (div.table-list-header)
-  Requests (see note 4 for generally, div.js-issue-row for specific)
-Pull request: https://github.com/*/*/pull/*
-  Title (span.js-issue-title specifically, div#partial-discussion-header for the whole header (includes new issue button))
-  Options (div#partial-discussion-sidebar for the whole thing, div.discussion-sidebar-item for specific)
+Repo/General:
+  Header: div.header
+  Repo header: div.repohead
+  Files div.file-wrap
+  Readme: div#readme
+  Metadata (commits, branches, etc): div.overall-summary
+  Branch list div.branch-select-menu > div.select-menu-modal-holder
+Commit list:
+  Branch list: div.branch-select-menu > div.select-menu-modal-holder
+  Commit: li.commit
+Specific commit:
+    Header: div.full-commit
+    File: div.file
+    Code: table.diff-table > tbody > tr
+Issues/pull requests:
+  Filters: div.subnav > div.subnav-spacer-right
+  Dropdowns: div.table-list-header
+  Issues: div.js-issue-row
+Specific issue/pull request:
+  Title: div#partial-discussion-header
+  Options: div.discussion-sidebar
+  Comments: div.comment
+  Comment box: div.timeline-new-comment
+Pull request:
   Conversation tab:
-    Comments (div.js-discussion for all, div.comment for one)
-    Detail (div.discussion-item, may be too small/generic, most is border)
-    Merge status (need to see what this looks like with a conflict)
-    Comment box (div.timeline-new-comment)
-  Commits tab:
-    Commits (li.commit)
+    Detail: div.discussion-item
+    Merge status: div.pull-merging
   Files changed:
-    Title (span.js-issue-title specifically, div#partial-discussion-header for the whole header (includes new issue button))
-    Code (div.file generally, each line is a <tr> broken up into three components. Doubt tracker has the accuracy to make much use of these)
-    Response box (div.pull-request-review-menu)
-Projects/Wiki/Pulse/Graphs/Settings?
+    Response box: div.pull-request-review-menu
 
-Google?https://www.google.ca/search?*
-  Search box (div.sbdd_a)
-  Search suggestions (div.sbibtd)
-  Results (individual is div.g, all is div#center_col)
+Google
+  Search box: div.sbibtd
+  Search suggestions: div.sbdd_a
+  Results: div.g
   
-StackOverflow post https://stackoverflow.com/questions/*
-  Title (div#question-header)
-  Question body (div#question)
-  Comments (div.comments, applies to question and answer)
-  Answers (div.answer, div.accepted_answer)
-  Specify clode blocks in each (<code> or <pre>)
-
-
+StackOverflow post
+  Title: div#question-header
+  Question body: td.postcell
+  Comments: div.comments (applies to question and answer)
+  Answers: td.answercell
+  
+BitBucket
+  Navigation: div.fbnKxr (whole thing, > div > div for individuals)
+  Overview: 
+    Main: div#repo-metadata, div#repo-stats
+    README: div.readme
+    Activity: div#repo-activity
+  Source:
+    Branch list: div#inline-dialog-branch-dialog
+    Files: table#souce-list > tbody> tr
+    README: article.readme
+  Commits: table.commit-list > tbody > tr
+    Files: div.diff-container
+    Code: div.udiff-line
+    Separator: div.skipped-container
+  Branches: table.branches-list > tbody > tr
+  Pull requests:
+    Filters: div#pull-requests-filter-bar
+    Pull request: tr.pull-request-row
+  Specific pull request:
+    Branch details: div.compare-widget-container
+    Merge decisions: div#pullrequest-actions
+    Pull request info: header#pull-request-diff-header
+  Issues:
+    Filters: div.filter-container, div.issues-toolbar-right
+    List: table.issues-list > tbody > tr
+  Specific issue:
+    Main content: div#issue-main-content
+    Comment: li.comment    
+    New comment: li.new-comment
+    Details: div.issue-attrs
+    
+    
+    
 1: Shares a parent with the button that creates the dropdown. May need to create a special case?
 2: Both the title and the id secions share the class "table-list-cell" which is the only identifier for the commit title section.
     The id section does have the class "commit-links-cell"
