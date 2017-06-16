@@ -70,11 +70,3 @@ BitBucket
     Comment: li.comment    
     New comment: li.new-comment
     Details: div.issue-attrs
-    
-    
-    
-1: Shares a parent with the button that creates the dropdown. May need to create a special case?
-2: Both the title and the id secions share the class "table-list-cell" which is the only identifier for the commit title section.
-    The id section does have the class "commit-links-cell"
-3: No unique selector, may have unique children though
-4: No unique selector, may be able to get by with <ul>? Can just do individual issues
