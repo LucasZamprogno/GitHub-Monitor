@@ -1,13 +1,13 @@
-var domains = ['github', 'stackoverflow', 'google'];
-var mouseInput = false; // Using the mouse to fake gaze data?
+var domains = ['github', 'stackoverflow', 'google', 'bitbucket'];
+var mouseInput = true; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
-var targets = { // Keys are target identifiers, values are descriptors
-	// Common github elements
+var githubTargets = {
+	// General/shared
 	'div.header': 'Main github header',
 	'div.repohead': 'Repo header',
 	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
-	'table.diff-table > tbody > tr': 'Special case, won\'t see this',
+	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Code
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
 	// Main repo page
@@ -15,27 +15,38 @@ var targets = { // Keys are target identifiers, values are descriptors
 	'div#readme': 'Repo README',
 	'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)',
 	// Commits
-	'li.commit': 'Special case, won\'t see this', // Would be cool to identify if they are looking at the commit name or id
+	'li.commit': 'Special case, won\'t see this', // Specific commit
 	'div.full-commit': 'Commit header',
 	// Issues + Pull requests
 	'div.subnav > div.subnav-spacer-right': 'Issue/Pull request filters',
 	'div.table-list-header': 'Issue/Pull request dropdown menus',
-	'li.js-issue-row': 'Special case, won\'t see this',
+	'li.js-issue-row': 'Special case, won\'t see this', // Issue OR pull request
 	'div.new-issue-form > div.discussion-timeline': 'New issue form title and comment',
 	'div#partial-discussion-header': 'Issue/Pull request header',
 	'div.discussion-sidebar': 'Issue/Pull request sidebar',
-	'div.discussion-item': 'Pull request discussion item', // Maybe expand this?
+	'div.discussion-item': 'Pull request discussion item',
 	'div.pull-merging': 'Pull request merge status',
-	'div.pull-request-review-menu': 'Pull request change review menu',
-	// Stackoverflow question
+	'div.pull-request-review-menu': 'Pull request change review menu'
+};
+var stackoverflowTargets = {
 	'div#question-header': 'Question title',
 	'td.postcell': 'Question body',
 	'div.comments': 'Comments',
-	'td.answercell': 'Answer',
-	// Google search results
+	'td.answercell': 'Answer'
+};
+var googleTargets = {
 	'div.sbibtd': 'Search field',
 	'div.sbdd_a': 'Search suggestions',
 	'div.g': 'Special case, won\'t see this'
+};
+var bitbucketTargets = {
+
+}
+var allTargets = {
+	'github': githubTargets,
+	'stackoverflow': stackoverflowTargets,
+	'google': googleTargets,
+	'bitbucket': bitbucketTargets
 };
 
 /**************************
@@ -57,7 +68,7 @@ var pageViewInterval = null; // How often to check if the user has been looking 
 
 var mouseListenerTimeout = null;
 
-var tracked = isTracked(window.location.hostname); // Is this a page we have target HTML elements for
+var tracked = isTracked(); // Is this a page we have target HTML elements for
 
 addAllListeners();
 
@@ -197,7 +208,7 @@ function addAllListeners() {
 
 // Add mouseenter/mouseleave listeners to any present targets
 function addMouseListeners() {
-	for(var identifier of Object.keys(targets)) {
+	for(var identifier in getCurrentTargets()) {
 		// Ugly hardcoding. Don't add listeners to every line of code
 		if(identifier === 'table.diff-table > tbody > tr') {
 			continue;
@@ -223,7 +234,7 @@ Event Monitoring Functions
 
 // Handles any 'addEventListener' style events
 function genericEventHandler(event) {
-	for(var identifier of Object.keys(targets)) {
+	for(var identifier in getCurrentTargets()) {
 		var found = $(event.target).closest(identifier);
 		if(found.length) {
 			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found));
@@ -259,7 +270,7 @@ function checkForTargetChange(x, y) {
 	var targettedElement = null;
 
 	// Check each target key to see if currently viewed element is a child of it
-	for(var identifier of Object.keys(targets)) {
+	for(var identifier in getCurrentTargets()) {
 		var found = $(viewed).closest(identifier);
 		if(found.length) {
 			targettedIdentifier = identifier;
@@ -302,7 +313,7 @@ function getTargetDescription(key, elem) {
 		case 'table.diff-table > tbody > tr': // Diff code line
 			return getLineDetails(elem);
 		default: // Used assigned label mapping in 'targets' global
-			return targets[key];
+			return getCurrentTargets()[key];
 			break;
 	}
 }
@@ -390,12 +401,23 @@ function imposterGazeEvent(xPos, yPos) {
 	chrome.runtime.sendMessage(obj);
 }
 
-// Is this page one that we have target elements for
-function isTracked(domain) {
+function getCurrentTargets() {
+	return allTargets[getCurrentTrackedDomain()];
+}
+
+function getCurrentTrackedDomain() {
 	for(var d of domains) {
-		if(domain.includes(d)) {
-			return true;
+		if(window.location.hostname.includes(d)) {
+			return d;
 		}
+	}
+	return null;
+}
+
+// Is this page one that we have target elements for
+function isTracked() {
+	if(getCurrentTrackedDomain() !== null) {
+		return true;
 	}
 	return false;
 }
