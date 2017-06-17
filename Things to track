@@ -48,7 +48,7 @@ BitBucket
     Activity: div#repo-activity
   Source:
     Branch list: div#inline-dialog-branch-dialog
-    Files: table#souce-list > tbody> tr
+    Files: table#source-list > tbody> tr
     README: article.readme
   Commits: table.commit-list > tbody > tr
     Files: div.diff-container
