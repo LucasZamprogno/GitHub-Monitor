@@ -148,9 +148,9 @@ function setPageViewInterval() {
 	}, PAGE_VIEW_TIME); 
 }
 
-// Just throw all the listeners on the document, the Big Brother approach to listeners
+// All lsitenres and intervals to be added at launch
 function addAllListeners() {
-	// Listeners for target events
+	// Listeners for target events, these bubble up from their source
 	document.addEventListener('click', genericEventHandler);
 	document.addEventListener('dblclick', genericEventHandler);
 	document.addEventListener('cut', genericEventHandler);
@@ -162,6 +162,7 @@ function addAllListeners() {
 	// Do initial calibration
 	document.body.addEventListener('mousemove', calibrate);
 
+	// If using the mouse to simulate gazes, need to listen for mouse moves
 	if(mouseInput) {
 		document.body.addEventListener('mousemove', function(event) {
 			imposterGazeEvent(event.clientX, event.clientY);
@@ -176,6 +177,7 @@ function addAllListeners() {
 			}
 		});		
 	} else {
+		// If the page is changing, end the page view
 		window.addEventListener('beforeunload', function(event){
 			chrome.runtime.sendMessage(pageViewObject());
 		})
@@ -196,12 +198,10 @@ function addAllListeners() {
 			}, MUTATION_TIMEOUT);
 		}
 	});
-
 	var config = {
 		subtree: true,
 		attributes: true
 	};
-
 	observer.observe(document, config);
 }
 
@@ -242,6 +242,7 @@ function genericEventHandler(event) {
 	}
 }
 
+// Handles the mouseenter/leave events for files since they aren't in the normal list
 function fileMouseEventHandler(event) {
 	var obj = eventInteractionObject(event.type, getTargetDescription('div.file', event.target));
 	chrome.runtime.sendMessage(obj);
@@ -306,10 +307,10 @@ function getTargetDescription(key, elem) {
 			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
 			var numberStr = spanContent.trim().split('\n')[0];
 			return 'Issue/Pull request: ' + numberStr + ', ' + title;
-		case 'div.g': // Get google result name link name
+		case 'div.g': // Get google result link name
 			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
 			return 'Google result: ' + link;
-		case 'table.diff-table > tbody > tr': // Diff code line
+		case 'table.diff-table > tbody > tr': // Github Diff code line
 			return getLineDetails(elem);
 		default: // Used assigned label mapping in 'targets' global
 			return getCurrentTargets()[key];
@@ -317,6 +318,7 @@ function getTargetDescription(key, elem) {
 	}
 }
 
+// Get the specifics of a line of code (line numbers, code text)
 function getLineDetails(elem) {
 	if(elem.hasClass('js-expandable-line')) {
 		return {'type': 'expandable code section'};
@@ -373,7 +375,7 @@ function pageViewObject() {
 	return obj;
 }
 
-// Gaze has changed, report the completed gaze to the server, set new gaze data
+// Gaze has changed, report the completed gaze to background.js, set new gaze data
 // If end is null, uses the current time
 function handleGazeEvent(newElement, newIdentifier, end) {
 	var gazeEnd;
@@ -392,6 +394,7 @@ function handleGazeEvent(newElement, newIdentifier, end) {
 	gazeStart = gazeEnd;
 }
 
+// If gazeLoss is recieved from background.js handle it appropriately
 function handleGazeLoss(timestamp) {
 	if(isTracked()) {
 		handleGazeEvent(null, null, timestamp);
@@ -416,10 +419,12 @@ function imposterGazeEvent(xPos, yPos) {
 	chrome.runtime.sendMessage(obj);
 }
 
+// Returns the object of target elements possible on the current domain
 function getCurrentTargets() {
 	return allTargets[getCurrentTrackedDomain()];
 }
 
+// Gets the current domain (e.g. github, not www.github.com), returns null if not a tracked page
 function getCurrentTrackedDomain() {
 	for(var domain in allTargets) {
 		if(window.location.hostname.includes(domain)) {
