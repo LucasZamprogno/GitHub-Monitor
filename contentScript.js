@@ -1,4 +1,3 @@
-var domains = ['github', 'stackoverflow', 'google', 'bitbucket'];
 var mouseInput = true; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
@@ -107,7 +106,7 @@ function setMessageListener() {
 				}
 			}
 		} else if(request.hasOwnProperty('gazeLoss')) {
-			handleGazeEvent(null, null);
+			handleGazeLoss(request['timestamp']);
 		}
 	});
 }
@@ -173,7 +172,7 @@ function addAllListeners() {
 		// If the page is no longer visible, end the last gaze event
 		document.addEventListener('visibilitychange', function(event) {
 			if(document.hidden) {
-				handleGazeEvent(null, null);
+				handleGazeEvent(null, null, null);
 			}
 		});		
 	} else {
@@ -281,10 +280,10 @@ function checkForTargetChange(x, y) {
 	
 	if(lastTarget && targettedElement) { // Past and current element are both targets
 		if(!(lastTarget.is(targettedElement))) {
-			handleGazeEvent(targettedElement, targettedIdentifier);
+			handleGazeEvent(targettedElement, targettedIdentifier, null);
 		} 
 	} else if (lastTarget || targettedElement) { // Only one is/was is a target, definitely changed
-		handleGazeEvent(targettedElement, targettedIdentifier);
+		handleGazeEvent(targettedElement, targettedIdentifier, null);
 	}
 };
 
@@ -375,8 +374,14 @@ function pageViewObject() {
 }
 
 // Gaze has changed, report the completed gaze to the server, set new gaze data
-function handleGazeEvent(newElement, newIdentifier) {
-	var gazeEnd = Date.now();
+// If end is null, uses the current time
+function handleGazeEvent(newElement, newIdentifier, end) {
+	var gazeEnd;
+	if(end) {
+		gazeEnd = end;
+	} else {
+		gazeEnd = Date.now();
+	}
 	if(lastIdentifier && lastTarget) {
 		var descrption = getTargetDescription(lastIdentifier, lastTarget);
 		var obj = gazeInteractionObject(descrption, gazeStart, gazeEnd);
@@ -385,6 +390,16 @@ function handleGazeEvent(newElement, newIdentifier) {
 	lastTarget = newElement;
 	lastIdentifier = newIdentifier;
 	gazeStart = gazeEnd;
+}
+
+function handleGazeLoss(timestamp) {
+	if(isTracked()) {
+		handleGazeEvent(null, null, timestamp);
+	} else {
+		chrome.runtime.sendMessage(pageViewObject());
+		clearInterval(pageViewInterval);
+		pageViewInterval = null;
+	}
 }
 
 /**************
@@ -406,9 +421,9 @@ function getCurrentTargets() {
 }
 
 function getCurrentTrackedDomain() {
-	for(var d of domains) {
-		if(window.location.hostname.includes(d)) {
-			return d;
+	for(var domain in allTargets) {
+		if(window.location.hostname.includes(domain)) {
+			return domain;
 		}
 	}
 	return null;

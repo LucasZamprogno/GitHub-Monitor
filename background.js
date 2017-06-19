@@ -32,6 +32,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	if(reporting) {
 		if(request.hasOwnProperty('x')) { // This is only for mouse input for development
 			lastCommunication = Date.now();
+			if(!gazeLossInterval) {
+				gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
+			}
 			sendCoordToActiveTabs(request['x'], request['y']);
 		} else {
 			postDataToServer(request);
@@ -45,6 +48,9 @@ function connectToTracker() {
 	clearInterval(attemptConnectionInterval);
 	ws.onmessage = function(e) {
 		lastCommunication = Date.now();
+		if(!gazeLossInterval) {
+			gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
+		}
 		var obj = JSON.parse(e.data);
 		var x = obj['x'];
 		var y = obj['y'];
@@ -140,9 +146,11 @@ function checkForGazeLoss() {
 	if(lastCommunication !== null && (Date.now() - lastCommunication > GAZE_LOSS_TIMEOUT)) {
 		chrome.tabs.query({active: true}, function(tabs) {
 			for(var tab of tabs) {
-				chrome.tabs.sendMessage(tab.id, {'gazeLoss': null});
+				chrome.tabs.sendMessage(tab.id, {'gazeLoss': null, 'timestamp': lastCommunication});
 			}
 		});
+		clearInterval(gazeLossInterval);
+		gazeLossInterval = null;
 	}
 }
 
