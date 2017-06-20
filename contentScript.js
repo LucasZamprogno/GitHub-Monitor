@@ -402,7 +402,7 @@ function githubLineDetails(elem) {
 			codeText = null;
 		}
 		return {
-			'type': type,
+			'change': type,
 			'oldLineNum': oldLineNum,
 			'newLineNum': newLineNum,
 			'codeText': codeText
@@ -429,7 +429,7 @@ function bitbucketLineDetails(elem) {
 		codeText = null;
 	}
 	return {
-		'type': type,
+		'change': type,
 		'oldLineNum': oldLineNum,
 		'newLineNum': newLineNum,
 		'codeText': codeText
@@ -440,7 +440,14 @@ function bitbucketLineDetails(elem) {
 function gazeInteractionObject(target, start, end) {
 	var obj = {};
 	obj['type'] = 'gaze';
-	obj['target'] = target;
+	if(typeof target !== 'string') {
+		obj['target'] = 'Code';
+		for(var key in target) {
+			obj[key] = target[key];
+		}
+	} else {
+		obj['target'] = target;
+	}
 	obj['timestamp'] = start;
 	obj['timestampEnd'] = end;
 	obj['duration'] = end - start;
