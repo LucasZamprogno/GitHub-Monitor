@@ -204,7 +204,7 @@ function privacyFilter(obj) {
 					delete obj['codeText'];
 				}
 				break;
-			case 'processes':
+			case 'program':
 				//
 				break;
 		}

@@ -3,9 +3,9 @@
 	<head>
 		<title>Monitor</title>
 		<link rel="stylesheet" type="text/css" href="jquery-ui/jquery-ui.min.css">
-		<script src='jquery-ui/external/jquery/jquery.js'></script>
+		<script src="jquery-ui/external/jquery/jquery.js"></script>
 		<script src="jquery-ui/jquery-ui.min.js"></script>
-		<script src='popup.js'></script>
+		<script src="popup.js"></script>
 		<style type="text/css">
 			body {
 				width: 250px;
@@ -19,33 +19,41 @@
 		</style>
 	</head>
 	<body>
-		<div id='tabs'>
+		<div id="tabs">
 			<ul>
 				<li><a href="#tab1">Main</a></li>
 				<li><a href="#tab2">Settings</a></li>
 			</ul>
-			<div id='tab1'>
-				<p id='id-string'>ID: <span id='session-id'>N/A</span></p>
-				<input type='text' name='session' id='session-field'>
-				<button id='set-session'>Set</button><br><br>
-				<button id='start'>Start monitor</button>
-				<button id='stop'>Stop monitor</button>
-				<p id='report-header'>Self report box</p>
-				<textarea id='report-area'></textarea><br>
-				<button id='report-button'>Send</button>
+			<div id="tab1">
+				<p id="id-string">ID: <span id="session-id">N/A</span></p>
+				<input type="text" name="session" id="session-field">
+				<button id="set-session">Set</button><br><br>
+				<button id="start">Start monitor</button>
+				<button id="stop">Stop monitor</button>
+				<p id="report-header">Self report box</p>
+				<textarea id="report-area"></textarea><br>
+				<button id="report-button">Send</button>
 			</div>
-			<div id='tab2'>
-				<input type='checkbox' id='private-mode'>
-				<label for='private-mode'>Hide certain details</label><br>
+			<div id="tab2">
+				<input type="checkbox" id="private-mode">
+				<label for="private-mode">Hide certain details</label><br>
 				<p>Details to hide:</p>
-				<input type='checkbox' class='privacy' id='google'>
-				<label for ='google'>Google results</label><br>
-				<input type='checkbox' class='privacy' id='domains'>
-				<label for ='domains'>Global domain level reporting</label><br>
-				<input type='checkbox' class='privacy' id='code'>
-				<label for ='code'>Code from diffs</label><br>
-				<input type='checkbox' class='privacy' id='processes'>
-				<label for ='processes'>Running processes (N/A)</label><br>
+				<input type="checkbox" class="privacy" id="google">
+				<label for ="google" title="Default behaviour: Records the titles of google search results.&#013;Enabling this changes that to only 'Google Result'.">
+					Google results
+				</label><br>
+				<input type="checkbox" class="privacy" id="domains">
+				<label for ="domains" title="Default behaviour: Records the domain of any page looked at, but no more (e.g. 'reddit').&#013;Enabling this disables this recording completely.">
+					Global domain level reporting
+				</label><br>
+				<input type="checkbox" class="privacy" id="code">
+				<label for ="code" title="Default behaviour: Records the actual code looked at in diffs.&#013;Enabling this removes the code (leaving details like line number, addition/deletion).">
+					Code from diffs
+				</label><br>
+				<input type="checkbox" class="privacy" id="program">
+				<label for ="program" title="Default behaviour: Records changes in the active program on the machine.&#013;Enabling this will record a 'program change' but no details about the program.">
+					Active program (N/A)
+				</label><br>
 			</div>
 		</div>
 	</body>
