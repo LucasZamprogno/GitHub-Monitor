@@ -199,6 +199,11 @@ function privacyFilter(obj) {
 					return null;
 				}
 				break;
+			case 'code':
+				if(obj['target'] === 'Code') {
+					delete obj['codeText'];
+				}
+				break;
 			case 'processes':
 				//
 				break;
