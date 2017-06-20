@@ -108,9 +108,9 @@ if(!tracked) {
 	setPageViewInterval();
 }
 
-/****************
-Startup functions
-****************/
+/****************************
+Startup/maintenance functions
+****************************/
 
 // Listen for coordinates from background.js, report when nesessary
 function setMessageListener() {
@@ -249,7 +249,7 @@ function addMouseListeners() {
 			item.addEventListener('mouseleave', genericEventHandler);
 		}
 	}
-	// Instead of each line of code, attempt to add to file containers
+	// In place of lines of code, attempt to add listeners to file containers
 	var files = $('div.file');
 	for(var item of files) {
 		item.addEventListener('mouseenter', githubFileMouseEventHandler);
@@ -284,6 +284,7 @@ function githubFileMouseEventHandler(event, target) {
 	chrome.runtime.sendMessage(obj);
 }
 
+// Handles the mouseenter/leave events for files since they aren't in the normal list
 function bitbucketFileMouseEventHandler(event, target) {
 	var obj = eventInteractionObject(event.type, getTargetDescription('div.diff-container', event.target));
 	chrome.runtime.sendMessage(obj);
@@ -329,54 +330,6 @@ function checkForTargetChange(x, y) {
 	}
 };
 
-// How to lable the target. Null is untracked, some elements have single lable, some have variable labels
-function getTargetDescription(key, elem) {
-	if(key == null) {
-		return 'Untracked';
-	}
-	switch(key) {
-		case 'div.file': // Github file name
-			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
-		case 'li.commit': // Github commit
-			var data = elem.attr('data-channel');
-			var split = data.split(':');
-			var commitID = split[split.length - 1];
-			var name = $(elem).find('p.commit-title > a').attr('title');
-			return 'Commit: id - ' + commitID + ', name - ' + name;
-		case 'li.js-issue-row': // Github issue in list
-			var title = $(elem).find('div > div > a.h4').text().trim();
-			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
-			var numberStr = spanContent.trim().split('\n')[0];
-			return 'Issue/Pull request: ' + numberStr + ', ' + title;
-		case 'div.g': // Google search result
-			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
-			return 'Google result: ' + link;
-		case 'div.diff-container':
-			var header = $(elem).find('div.heading > div.primary > h1.filename');
-			header = $(header).contents().filter(function() { // Ignore <span>s
-				return this.nodeType == 3;
-			}).text().trim();
-			return 'File: ' + header;
-		case 'table.diff-table > tbody > tr': // Github Diff code line
-			return githubLineDetails(elem);
-		case 'table.commit-list > tbody > tr': // Bitbucket commits
-			var idSplit = $(elem).find('td.hash > div > a').attr('href').split('/');
-			var commitID = idSplit[idSplit.length - 1].trim();
-			var name = $(elem).find('td.text > div > div > span.subject').text().trim();
-			return 'Commit: id - ' + commitID + ', name - ' + name;
-		case 'div.udiff-line': // Bitbucket code
-			return bitbucketLineDetails(elem);
-		case 'table.branches-list > tbody > tr.iterable-item': // Bitbucket branch from list
-			return 'Branch ' + $(elem).find('td.branch-header > a').text().trim();
-		case 'tr.pull-request-row': // Bitbucket pull request
-			return 'Pull request: ' + $(elem).find('td.title > div > a').text().trim();
-		case 'table.issues-list > tbody > tr': // Bitpucket issue
-			return 'Issue: ' + $(elem).find('td.text > div > div > a').text().trim();
-		default: // Used assigned label mapping in 'targets' global
-			return getCurrentTargets()[key];
-	}
-}
-
 // Get the specifics of a line of code (line numbers, code text)
 function githubLineDetails(elem) {
 	if(elem.hasClass('js-expandable-line')) {
@@ -410,6 +363,7 @@ function githubLineDetails(elem) {
 	}
 }
 
+// Get the specifics of a line of code (line numbers, code text)
 function bitbucketLineDetails(elem) {
 	var type;
 	var oldLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-fnum');
@@ -497,10 +451,6 @@ function handleGazeLoss(timestamp) {
 	}
 }
 
-/**************
-Other Functions
-**************/
-
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function imposterGazeEvent(xPos, yPos) {
 	var obj = {
@@ -509,6 +459,58 @@ function imposterGazeEvent(xPos, yPos) {
 		'timestamp': Date.now()
 	};
 	chrome.runtime.sendMessage(obj);
+}
+
+/**************
+Other Functions
+**************/
+
+// How to lable the target. Null is untracked, some elements have single lable, some have variable labels
+function getTargetDescription(key, elem) {
+	if(key == null) {
+		return 'Untracked';
+	}
+	switch(key) {
+		case 'div.file': // Github file name
+			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
+		case 'li.commit': // Github commit
+			var data = elem.attr('data-channel');
+			var split = data.split(':');
+			var commitID = split[split.length - 1];
+			var name = $(elem).find('p.commit-title > a').attr('title');
+			return 'Commit: id - ' + commitID + ', name - ' + name;
+		case 'li.js-issue-row': // Github issue in list
+			var title = $(elem).find('div > div > a.h4').text().trim();
+			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
+			var numberStr = spanContent.trim().split('\n')[0];
+			return 'Issue/Pull request: ' + numberStr + ', ' + title;
+		case 'div.g': // Google search result
+			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
+			return 'Google result: ' + link;
+		case 'table.diff-table > tbody > tr': // Github Diff code line
+			return githubLineDetails(elem);
+		case 'div.diff-container': // Bitbucket diff file
+			var header = $(elem).find('div.heading > div.primary > h1.filename');
+			header = $(header).contents().filter(function() { // Ignore <span>s
+				return this.nodeType == 3;
+			}).text().trim();
+			return 'File: ' + header;
+		case 'table.commit-list > tbody > tr': // Bitbucket commits
+			var idSplit = $(elem).find('td.hash > div > a').attr('href').split('/');
+			var commitID = idSplit[idSplit.length - 1].trim();
+			var name = $(elem).find('td.text > div > div > span.subject').text().trim();
+			return 'Commit: id - ' + commitID + ', name - ' + name;
+		case 'div.udiff-line': // Bitbucket code
+			return bitbucketLineDetails(elem);
+		case 'table.branches-list > tbody > tr.iterable-item': // Bitbucket branch from list
+			return 'Branch ' + $(elem).find('td.branch-header > a').text().trim();
+		case 'tr.pull-request-row': // Bitbucket pull request
+			return 'Pull request: ' + $(elem).find('td.title > div > a').text().trim();
+		case 'table.issues-list > tbody > tr': // Bitpucket issue
+			return 'Issue: ' + $(elem).find('td.text > div > div > a').text().trim();
+		default: // Used assigned label mapping in 'targets' global
+			return getCurrentTargets()[key];
+	}
 }
 
 // Returns the object of target elements possible on the current domain
