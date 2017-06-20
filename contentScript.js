@@ -365,7 +365,7 @@ function getTargetDescription(key, elem) {
 			var name = $(elem).find('td.text > div > div > span.subject').text().trim();
 			return 'Commit: id - ' + commitID + ', name - ' + name;
 		case 'div.udiff-line': // Bitbucket code
-			return bitbucketLineDetails();
+			return bitbucketLineDetails(elem);
 		case 'table.branches-list > tbody > tr.iterable-item': // Bitbucket branch from list
 			return 'Branch ' + $(elem).find('td.branch-header > a').text().trim();
 		case 'tr.pull-request-row': // Bitbucket pull request
@@ -412,8 +412,8 @@ function githubLineDetails(elem) {
 
 function bitbucketLineDetails(elem) {
 	var type;
-	var oldLineNum = $(elem).find('div.gutter > a.line-numbers').getAttribute('data-fnum');
-	var newLineNum = $(elem).find('div.gutter > a.line-numbers').getAttribute('data-fnum');
+	var oldLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-fnum');
+	var newLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-tnum');
 	var codeText = $(elem).find('pre.source').text().trim();
 	if(elem.hasClass('common')) {
 		type = 'unchanged';
@@ -428,7 +428,6 @@ function bitbucketLineDetails(elem) {
 		type = 'unknown';
 		codeText = null;
 	}
-	console.log('old' + oldLineNum + ' new ' + newLineNum);
 	return {
 		'type': type,
 		'oldLineNum': oldLineNum,
