@@ -158,8 +158,8 @@ function checkForGazeLoss() {
 function sendCoordToActiveTabs(x, y) {
 	chrome.tabs.query({active: true}, function(tabs) {
 		for(var tab of tabs) {
-			chrome.tabs.getZoom(tab.id, function(ratio){
-				chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y, 'zoom': ratio});
+			chrome.tabs.getZoom(tab.id, function(zoomFactor){
+				chrome.tabs.sendMessage(tab.id, {'x': x, 'y': y, 'zoom': zoomFactor});
 			});
 		}
 	});

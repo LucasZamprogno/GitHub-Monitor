@@ -39,7 +39,38 @@ var googleTargets = {
 	'div.g': 'Special case, won\'t see this'
 };
 var bitbucketTargets = {
-
+	'div.fbnKxr': 'Navigation menu',
+	// Overview
+	'div#repo-metadata': 'Main repo information',
+	'div#repo-stats': 'Main repo information',
+	'div.readme': 'README',
+	'div#repo-activity': 'Repo activity',
+	// Source
+	'div#inline-dialog-branch-dialog': 'Branch list',
+	'table#source-list': 'File browser', // File/folder
+	'article.readme': 'README',
+	// Commits
+	'table.commit-list > tbody > tr': 'Special case, won\'t see this', // Commit
+	'div.udiff-line': 'Special case, won\'t see this', // Code
+	'div.ellipsis': 'Hidden code expansion button',
+	// Branches
+	'table.branches-list > tbody > tr.iterable-item': 'Special case, won\'t see this', // Branch
+	// Pull requests
+	'div#pull-requests-filter-bar': 'Pull request filters',
+	'tr.pull-request-row': 'Special case, won\'t see this', // Pull request
+	// Specific pull request
+	'div.compare-widget-container': 'Pull request branch details',
+	'div#pullrequest-actions': 'Pull request actions',
+	'header#pull-request-diff-header': 'Pull request information',
+	// Issues
+	'div.filter-container': 'Issue filters',
+	'div.issues-toolbar-right': 'Issue filters',
+	'table.issues-list > tbody > tr': 'Special case, won\'t see this', // Issue
+	// Specific issue
+	'div#issue-main-content': 'Issue content',
+	'li.comment': 'Comment',
+	'li.new-comment': 'New comment field',
+	'div.issue-attrs': 'Issue details',
 }
 var allTargets = {
 	'github': githubTargets,
@@ -71,7 +102,7 @@ var tracked = isTracked(); // Is this a page we have target HTML elements for
 
 addAllListeners();
 
-setMessageListener()
+setMessageListener();
 
 if(!tracked) {
 	setPageViewInterval();
@@ -209,7 +240,7 @@ function addAllListeners() {
 function addMouseListeners() {
 	for(var identifier in getCurrentTargets()) {
 		// Ugly hardcoding. Don't add listeners to every line of code
-		if(identifier === 'table.diff-table > tbody > tr') {
+		if(identifier === 'table.diff-table > tbody > tr' || identifier === 'div.udiff-line') {
 			continue;
 		}
 		var found = $(identifier);
@@ -221,8 +252,13 @@ function addMouseListeners() {
 	// Instead of each line of code, attempt to add to file containers
 	var files = $('div.file');
 	for(var item of files) {
-		item.addEventListener('mouseenter', fileMouseEventHandler);
-		item.addEventListener('mouseleave', fileMouseEventHandler);
+		item.addEventListener('mouseenter', githubFileMouseEventHandler);
+		item.addEventListener('mouseleave', githubFileMouseEventHandler);
+	}
+	var files = $('div.diff-container');
+	for(var item of files) {
+		item.addEventListener('mouseenter', bitbucketFileMouseEventHandler);
+		item.addEventListener('mouseleave', bitbucketFileMouseEventHandler);
 	}
 
 }
@@ -243,8 +279,13 @@ function genericEventHandler(event) {
 }
 
 // Handles the mouseenter/leave events for files since they aren't in the normal list
-function fileMouseEventHandler(event) {
+function githubFileMouseEventHandler(event, target) {
 	var obj = eventInteractionObject(event.type, getTargetDescription('div.file', event.target));
+	chrome.runtime.sendMessage(obj);
+}
+
+function bitbucketFileMouseEventHandler(event, target) {
+	var obj = eventInteractionObject(event.type, getTargetDescription('div.diff-container', event.target));
 	chrome.runtime.sendMessage(obj);
 }
 
@@ -294,32 +335,50 @@ function getTargetDescription(key, elem) {
 		return 'Untracked';
 	}
 	switch(key) {
-		case 'div.file': // Get github file name
+		case 'div.file': // Github file name
 			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
-		case 'li.commit': // Get githuv commit id and title
+		case 'li.commit': // Github commit
 			var data = elem.attr('data-channel');
 			var split = data.split(':');
 			var commitID = split[split.length - 1];
 			var name = $(elem).find('p.commit-title > a').attr('title');
 			return 'Commit: id - ' + commitID + ', name - ' + name;
-		case 'li.js-issue-row': // Get github issue name and number
+		case 'li.js-issue-row': // Github issue in list
 			var title = $(elem).find('div > div > a.h4').text().trim();
 			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
 			var numberStr = spanContent.trim().split('\n')[0];
 			return 'Issue/Pull request: ' + numberStr + ', ' + title;
-		case 'div.g': // Get google result link name
+		case 'div.g': // Google search result
 			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
 			return 'Google result: ' + link;
+		case 'div.diff-container':
+			var header = $(elem).find('div.heading > div.primary > h1.filename');
+			header = $(header).contents().filter(function() { // Ignore <span>s
+				return this.nodeType == 3;
+			}).text().trim();
+			return 'File: ' + header;
 		case 'table.diff-table > tbody > tr': // Github Diff code line
-			return getLineDetails(elem);
+			return githubLineDetails(elem);
+		case 'table.commit-list > tbody > tr': // Bitbucket commits
+			var idSplit = $(elem).find('td.hash > div > a').attr('href').split('/');
+			var commitID = idSplit[idSplit.length - 1].trim();
+			var name = $(elem).find('td.text > div > div > span.subject').text().trim();
+			return 'Commit: id - ' + commitID + ', name - ' + name;
+		case 'div.udiff-line': // Bitbucket code
+			return bitbucketLineDetails();
+		case 'table.branches-list > tbody > tr.iterable-item': // Bitbucket branch from list
+			return 'Branch ' + $(elem).find('td.branch-header > a').text().trim();
+		case 'tr.pull-request-row': // Bitbucket pull request
+			return 'Pull request: ' + $(elem).find('td.title > div > a').text().trim();
+		case 'table.issues-list > tbody > tr': // Bitpucket issue
+			return 'Issue: ' + $(elem).find('td.text > div > div > a').text().trim();
 		default: // Used assigned label mapping in 'targets' global
 			return getCurrentTargets()[key];
-			break;
 	}
 }
 
 // Get the specifics of a line of code (line numbers, code text)
-function getLineDetails(elem) {
+function githubLineDetails(elem) {
 	if(elem.hasClass('js-expandable-line')) {
 		return {'type': 'expandable code section'};
 	} else {
@@ -347,8 +406,35 @@ function getLineDetails(elem) {
 			'oldLineNum': oldLineNum,
 			'newLineNum': newLineNum,
 			'codeText': codeText
-		}
+		};
 	}
+}
+
+function bitbucketLineDetails(elem) {
+	var type;
+	var oldLineNum = $(elem).find('div.gutter > a.line-numbers').getAttribute('data-fnum');
+	var newLineNum = $(elem).find('div.gutter > a.line-numbers').getAttribute('data-fnum');
+	var codeText = $(elem).find('pre.source').text().trim();
+	if(elem.hasClass('common')) {
+		type = 'unchanged';
+		codeText = codeText.trim();
+	} else if(elem.hasClass('addition')) {
+		type = 'addition';
+		codeText = codeText.substring(1).trim();
+	} else if(elem.hasClass('deletion')) {
+		type = 'deletion';
+		codeText = codeText.substring(1).trim();
+	} else { // Hopefully shouldn't happen
+		type = 'unknown';
+		codeText = null;
+	}
+	console.log('old' + oldLineNum + ' new ' + newLineNum);
+	return {
+		'type': type,
+		'oldLineNum': oldLineNum,
+		'newLineNum': newLineNum,
+		'codeText': codeText
+	};
 }
 
 // For gazes on a target
