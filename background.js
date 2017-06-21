@@ -18,24 +18,24 @@ var privateMode = getLocal('privateMode');
 var privacyFilters = getLocal('privacyFilters');
 var ws;
 var attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
-var gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
+var gazeLossInterval = null;
+var badgeUpdates = setInterval(function() { setBadge() }, 250);
 var lastCommunication = null;
 
 if(reporting) {
 	startReporting();
 } else {
-	stopReporting()
+	stopReporting();
 }
 
 // Pass data from content scripts on to server OR pass mouse coordinates back to scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if(reporting) {
+	if(sender.hasOwnProperty('tab')) {
 		if(request.hasOwnProperty('x')) { // This is only for mouse input for development
-			lastCommunication = Date.now();
-			if(!gazeLossInterval) {
-				gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
+			registerCommunication();
+			if(reporting) {
+				sendCoordToActiveTabs(request['x'], request['y']);
 			}
-			sendCoordToActiveTabs(request['x'], request['y']);
 		} else {
 			postDataToServer(request);
 		}
@@ -47,10 +47,7 @@ function connectToTracker() {
 	ws = new WebSocket('ws://localhost:' + WEBSOCKET_PORT);
 	clearInterval(attemptConnectionInterval);
 	ws.onmessage = function(e) {
-		lastCommunication = Date.now();
-		if(!gazeLossInterval) {
-			gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
-		}
+		registerCommunication();
 		var obj = JSON.parse(e.data);
 		var x = obj['x'];
 		var y = obj['y'];
@@ -59,6 +56,14 @@ function connectToTracker() {
 	ws.onclose = function(e) {
 		ws = null;
 		attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
+	}
+}
+
+function registerCommunication() {
+	lastCommunication = Date.now();
+	if(!gazeLossInterval) {
+		gazeLossInterval = setInterval(function(){ checkForGazeLoss() }, GAZE_LOSS_WAIT);
+		updatePopupGazeStatus('connected');
 	}
 }
 
@@ -99,8 +104,6 @@ function setLocal(key, val) {
 function startReporting() {
 	var wasReporting = reporting;
 	if(sessionId) { // Hopefully not possible for sessionId to not be set, but just in case
-		chrome.browserAction.setBadgeBackgroundColor({'color':[0, 170, 0, 255]});
-		chrome.browserAction.setBadgeText({'text':'On'});
 		reporting = true;
 		setLocal('reporting', true);
 		if(!wasReporting) {
@@ -119,8 +122,6 @@ function startReporting() {
 // Prevent reporting to the server, set icon accordingly
 function stopReporting() {
 	var wasReporting = reporting;
-	chrome.browserAction.setBadgeBackgroundColor({'color':[170, 0, 0, 255]});
-	chrome.browserAction.setBadgeText({'text':'Off'});
 	reporting = false;
 	setLocal('reporting', false);
 	if(wasReporting) {
@@ -144,6 +145,7 @@ function updatePrivacySettings(arrStr) {
 // (i.e. user looked/moved away from screen)
 function checkForGazeLoss() {
 	if(lastCommunication !== null && (Date.now() - lastCommunication > GAZE_LOSS_TIMEOUT)) {
+		updatePopupGazeStatus('disconnected');
 		chrome.tabs.query({active: true}, function(tabs) {
 			for(var tab of tabs) {
 				chrome.tabs.sendMessage(tab.id, {'gazeLoss': null, 'timestamp': lastCommunication});
@@ -163,6 +165,7 @@ function sendCoordToActiveTabs(x, y) {
 	});
 }
 
+// If this isn't wrapped in a function it fails when done quickly in succession
 function getZoomAndSend(id, x, y) {
 	chrome.tabs.getZoom(id, function(zoomFactor){
 		chrome.tabs.sendMessage(id, {'x': x, 'y': y, 'zoom': zoomFactor});
@@ -183,6 +186,10 @@ function postDataToServer(data) {
 			xmlhttp.send(JSON.stringify(data));
 		}
 	}
+}
+
+function updatePopupGazeStatus(status) {
+	chrome.runtime.sendMessage({'status': status});
 }
 
 // Substitute any unwanted information, or return null if the event should not be reported at all
@@ -210,4 +217,17 @@ function privacyFilter(obj) {
 		}
 	}
 	return obj;
+}
+
+function setBadge() {
+	if(reporting && gazeLossInterval) {
+		chrome.browserAction.setBadgeBackgroundColor({'color':[0, 120, 0, 255]});
+		chrome.browserAction.setBadgeText({'text':'On'});
+	} else if(reporting && !gazeLossInterval) {
+		chrome.browserAction.setBadgeBackgroundColor({'color':[120, 0, 0, 255]});
+		chrome.browserAction.setBadgeText({'text':'D/C'});
+	} else {
+		chrome.browserAction.setBadgeBackgroundColor({'color':[120, 0, 0, 255]});
+		chrome.browserAction.setBadgeText({'text':'Off'});
+	}
 }
