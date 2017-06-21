@@ -10,12 +10,6 @@
 			body {
 				width: 250px;
 			}
-			#start {
-				display: none;
-			}
-			#stop {
-				display: none;
-			}
 		</style>
 	</head>
 	<body>
@@ -27,12 +21,15 @@
 			<div id="tab1">
 				<p id="id-string">ID: <span id="session-id">N/A</span></p>
 				<input type="text" name="session" id="session-field">
-				<button id="set-session">Set</button><br><br>
-				<button id="start">Start monitor</button>
-				<button id="stop">Stop monitor</button>
-				<p id="report-header">Self report box</p>
-				<textarea id="report-area"></textarea><br>
-				<button id="report-button">Send</button>
+				<button id="set-session">Set</button>
+				<button id="change-session">Change ID</button><br><br>
+				<div id="reporting">
+					<button id="start">Start monitor</button>
+					<button id="stop">Stop monitor</button>
+					<p id="report-header">Self report box</p>
+					<textarea id="report-area"></textarea><br>
+					<button id="report-button">Send</button>
+				</div>
 			</div>
 			<div id="tab2">
 				<input type="checkbox" id="private-mode">
