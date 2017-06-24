@@ -340,7 +340,7 @@ function checkForTargetChange(x, y) {
 // Get the specifics of a line of code (line numbers, code text)
 function githubLineDetails(elem) {
 	if(elem.hasClass('js-expandable-line')) {
-		return {'type': 'expandable code section'};
+		return {'target': 'expandable code section'};
 	} else {
 		// Line nums will be null if not present (addition or deletion lines)
 		var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
