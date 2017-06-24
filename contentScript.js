@@ -82,7 +82,8 @@ var allTargets = {
 /**************************
 Startup variables/listeners
 **************************/
-
+var calibrated = false;
+var lastZoom = null;
 var windowXOffset = window.screenX; // Window distance from screen (0,0)
 var windowYOffset = window.screenY; 
 var totalXOffset = null; // Difference between document (0,0) and screen pixel (0,0)
@@ -120,12 +121,15 @@ function setMessageListener() {
 			var x = request['x'];
 			var y = request['y'];
 			var zoom = request['zoom'];
+			lastZoom = zoom;
 			if(!mouseInput) { // Comes from eyetracker
 				x = Math.round((x - totalXOffset)/zoom);
 				y = Math.round((y - totalYOffset)/zoom);
 			}
 			if(tracked) {
-				checkForTargetChange(x, y);
+				if(calibrated) {
+					checkForTargetChange(x, y);
+				}
 			} else {
 				if(!pageViewInterval) {
 					setPageViewInterval();
@@ -144,12 +148,15 @@ function setMessageListener() {
 
 // Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
 function calibrate(event) {
-	totalXOffset = event.screenX - event.clientX;
-	totalYOffset = event.screenY - event.clientY;
-	console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
-	recalibrationInterval = setInterval(function() { recalibrate() }, 1000);
-	// Remove this listener
-	document.body.removeEventListener('mousemove', calibrate);
+	if(lastZoom) { // Needed for calibration
+		totalXOffset = event.screenX - (event.clientX * lastZoom);
+		totalYOffset = event.screenY - (event.clientY * lastZoom);
+		console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
+		recalibrationInterval = setInterval(function() { recalibrate() }, 1000);
+		// Remove this listener
+		document.body.removeEventListener('mousemove', calibrate);
+		calibrated = true;
+	}
 }
 
 // Check if the window has changed and update the offsets
