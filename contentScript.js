@@ -222,6 +222,7 @@ function addAllListeners() {
 	}
 
 	// After 100ms of no mutations, attempt to add mouseenter/mouseleave listeners to targets
+	// This is needed because some page changes don't refresh the page, and new listeners may be needed
 	var observer = new MutationObserver(function(mutations) {
 		if(mouseListenerTimeout === null) { // First change in a while? Set the timer
 			mouseListenerTimeout = setTimeout(function(){
@@ -342,6 +343,8 @@ function githubLineDetails(elem) {
 	if(elem.hasClass('js-expandable-line')) {
 		return {'target': 'expandable code section'};
 	} else {
+		var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
+		var file = fileString.substring(6); // Cut out 'File: '
 		// Line nums will be null if not present (addition or deletion lines)
 		var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
 		var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
@@ -362,6 +365,7 @@ function githubLineDetails(elem) {
 			codeText = null;
 		}
 		return {
+			'file': file,
 			'change': type,
 			'oldLineNum': oldLineNum,
 			'newLineNum': newLineNum,
@@ -373,6 +377,8 @@ function githubLineDetails(elem) {
 // Get the specifics of a line of code (line numbers, code text)
 function bitbucketLineDetails(elem) {
 	var type;
+	var fileString = getTargetDescription('div.diff-container', elem.closest('div.diff-container')); // Format 'File: filename.ext'
+	var file = fileString.substring(6) // Cut out 'File: '
 	var oldLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-fnum');
 	var newLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-tnum');
 	var codeText = $(elem).find('pre.source').text().trim();
@@ -390,6 +396,7 @@ function bitbucketLineDetails(elem) {
 		codeText = null;
 	}
 	return {
+		'file': file,
 		'change': type,
 		'oldLineNum': oldLineNum,
 		'newLineNum': newLineNum,
