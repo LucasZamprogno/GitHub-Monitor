@@ -195,6 +195,7 @@ function addAllListeners() {
 	document.addEventListener('copy', genericEventHandler);
 	document.addEventListener('paste', genericEventHandler);
 	document.addEventListener('contextmenu', genericEventHandler);
+	document.addEventListener('keydown', genericEventHandler)
 	addMouseListeners();
 
 	// Do initial calibration
@@ -304,6 +305,7 @@ function eventInteractionObject(type, target) {
 		'type': type,
 		'target': target,
 		'timestamp': Date.now(),
+		'domain': window.location.hostname,
 		'pageTitle': document.title,
 		'pageHref': window.location.href
 	};
@@ -409,7 +411,7 @@ function gazeInteractionObject(target, start, end) {
 	var obj = {};
 	obj['type'] = 'gaze';
 	if(typeof target !== 'string') {
-		obj['target'] = 'Code';
+		obj['target'] = 'code';
 		for(var key in target) {
 			obj[key] = target[key];
 		}
@@ -419,6 +421,7 @@ function gazeInteractionObject(target, start, end) {
 	obj['timestamp'] = start;
 	obj['timestampEnd'] = end;
 	obj['duration'] = end - start;
+	obj['domain'] = window.location.hostname;
 	obj['pageTitle'] = document.title;
 	obj['pageHref'] = window.location.href;
 	return obj;
@@ -463,6 +466,11 @@ function handleGazeLoss(timestamp) {
 		clearInterval(pageViewInterval);
 		pageViewInterval = null;
 	}
+	var obj = {
+		'type': 'gazeLoss',
+		'timestamp': timestamp
+	}
+	chrome.runtime.sendMessage(obj);
 }
 
 // Substitute for data being sent from eyetracker, sends cursor position to server
