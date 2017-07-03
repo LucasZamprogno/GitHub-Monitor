@@ -36,6 +36,7 @@ var stackoverflowTargets = {
 var googleTargets = {
 	'div.sbibtd': 'Search field',
 	'div.sbdd_a': 'Search suggestions',
+	'div.kp-blk': 'Related searches',
 	'div.g': 'Special case, won\'t see this'
 };
 var bitbucketTargets = {
@@ -130,13 +131,13 @@ function setMessageListener() {
 				if(calibrated) {
 					checkForTargetChange(x, y);
 				}
-			} else {
-				if(!pageViewInterval) {
-					setPageViewInterval();
-					gazeStart = Date.now();
-				}
+			} else { // Untracked
 				// If the gaze falls on this page
 				if(document.elementFromPoint(x, y) !== null) {
+					if(!pageViewInterval) {
+						setPageViewInterval();
+						gazeStart = Date.now();
+					}
 					lastGaze = Date.now();
 				}
 			}
@@ -508,6 +509,9 @@ function getTargetDescription(key, elem) {
 			return 'Issue/Pull request: ' + numberStr + ', ' + title;
 		case 'div.g': // Google search result
 			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
+			if(link == '') {
+				return 'Google result special element';				
+			}
 			return 'Google result: ' + link;
 		case 'table.diff-table > tbody > tr': // Github Diff code line
 			return githubLineDetails(elem);
