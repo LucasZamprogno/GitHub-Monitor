@@ -207,7 +207,7 @@ function privacyFilter(obj) {
 				}
 				break;
 			case 'code':
-				if(obj['target'] === 'Code') {
+				if(obj['target'] === 'code') {
 					delete obj['codeText'];
 				}
 				break;
