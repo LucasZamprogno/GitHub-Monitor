@@ -1,18 +1,18 @@
 var mouseInput = true; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
-var githubTargets = {
+var githubTargets = { // Some pretty useless things are commented out in case we want them later
 	// General/shared
-	'div.header': 'Main github header',
-	'div.repohead': 'Repo header',
-	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
+	//'div.header': 'Main github header',
+	//'div.repohead': 'Repo header',
+	//'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
 	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Code
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
 	// Main repo page
 	'div.file-wrap': 'Repo file explorer',
 	'div#readme': 'Repo README',
-	'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)',
+	//'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)',
 	// Commits
 	'li.commit': 'Special case, won\'t see this', // Specific commit
 	'div.full-commit': 'Commit header',
@@ -326,6 +326,11 @@ function checkForTargetChange(x, y) {
 	for(var identifier in getCurrentTargets()) {
 		var found = $(viewed).closest(identifier);
 		if(found.length) {
+			// Ugly hardcoding
+			if(found.hasClass('js-expandable-line')) {
+				// Ignore the code breaks in a diff
+				break;
+			}
 			targettedIdentifier = identifier;
 			targettedElement = found;
 			break;
@@ -343,38 +348,34 @@ function checkForTargetChange(x, y) {
 
 // Get the specifics of a line of code (line numbers, code text)
 function githubLineDetails(elem) {
-	if(elem.hasClass('js-expandable-line')) {
-		return {'target': 'expandable code section'};
-	} else {
-		var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
-		var file = fileString.substring(6); // Cut out 'File: '
-		// Line nums will be null if not present (addition or deletion lines)
-		var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
-		var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
-		var codeElem = $(elem).find('td.blob-code');
-		var codeText = codeElem.find('span.blob-code-inner').text();
-		var type;
-		if(codeElem.hasClass('blob-code-context')) {
-			type = 'unchanged';
-			codeText = codeText.trim();
-		} else if(codeElem.hasClass('blob-code-addition')) {
-			type = 'addition';
-			codeText = codeText.substring(1).trim();
-		} else if(codeElem.hasClass('blob-code-deletion')) {
-			type = 'deletion';
-			codeText = codeText.substring(1).trim();
-		} else { // Hopefully shouldn't happen
-			type = 'unknown';
-			codeText = null;
-		}
-		return {
-			'file': file,
-			'change': type,
-			'oldLineNum': oldLineNum,
-			'newLineNum': newLineNum,
-			'codeText': codeText
-		};
+	var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
+	var file = fileString.substring(6); // Cut out 'File: '
+	// Line nums will be null if not present (addition or deletion lines)
+	var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
+	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
+	var codeElem = $(elem).find('td.blob-code');
+	var codeText = codeElem.find('span.blob-code-inner').text();
+	var type;
+	if(codeElem.hasClass('blob-code-context')) {
+		type = 'unchanged';
+		codeText = codeText.trim();
+	} else if(codeElem.hasClass('blob-code-addition')) {
+		type = 'addition';
+		codeText = codeText.substring(1).trim();
+	} else if(codeElem.hasClass('blob-code-deletion')) {
+		type = 'deletion';
+		codeText = codeText.substring(1).trim();
+	} else { // Hopefully shouldn't happen
+		type = 'unknown';
+		codeText = null;
 	}
+	return {
+		'file': file,
+		'change': type,
+		'oldLineNum': oldLineNum,
+		'newLineNum': newLineNum,
+		'codeText': codeText
+	};
 }
 
 // Get the specifics of a line of code (line numbers, code text)
