@@ -1,4 +1,4 @@
-var mouseInput = true; // Using the mouse to fake gaze data?
+var mouseInput = false; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var githubTargets = { // Some pretty useless things are commented out in case we want them later
@@ -79,6 +79,21 @@ var allTargets = {
 	'google': googleTargets,
 	'bitbucket': bitbucketTargets
 };
+
+var pageTypeRegex = {
+	'Github main repo page': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+$'),
+	'Github commits': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/commits\/[^/]+$'),
+	'Github commit': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/commit\/[0-9a-f]+$'),
+	'Github issues': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/issues$'),
+	'Github issue': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/\\d+$'),
+	'Github pull requests': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pulls$'),
+	'Github pull request': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+$'),
+	'Github pull request commits': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/commits$'),
+	'Github pull request commit': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/commits\/[0-9a-f]+$'),
+	'Github pull request files': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/files$'),
+	'Google search': new RegExp('https:\/\/www.google\.[a-z]{2,3}\/search.+'),
+	'Stack Overflow question': new RegExp('https:\/\/stackoverflow\.com\/questions\/.+$')
+}
 
 /**************************
 Startup variables/listeners
@@ -307,8 +322,8 @@ function eventInteractionObject(type, target) {
 		'target': target,
 		'timestamp': Date.now(),
 		'domain': window.location.hostname,
-		'pageTitle': document.title,
-		'pageHref': window.location.href
+		'pageHref': window.location.href,
+		'pageType': labelPageType()
 	};
 }
 
@@ -424,8 +439,8 @@ function gazeInteractionObject(target, start, end) {
 	obj['timestampEnd'] = end;
 	obj['duration'] = end - start;
 	obj['domain'] = window.location.hostname;
-	obj['pageTitle'] = document.title;
 	obj['pageHref'] = window.location.href;
+	obj['pageType'] = labelPageType();
 	return obj;
 }
 
@@ -488,6 +503,15 @@ function imposterGazeEvent(xPos, yPos) {
 /**************
 Other Functions
 **************/
+
+function labelPageType() {
+	for(var key in pageTypeRegex) {
+		if(pageTypeRegex[key].test(window.location.href)) {
+			return key;
+		}
+	}
+	return 'Unlabeled page';
+}
 
 // How to lable the target. Null is untracked, some elements have single lable, some have variable labels
 function getTargetDescription(key, elem) {
