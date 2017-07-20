@@ -37,7 +37,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 				sendCoordToActiveTabs(request['x'], request['y']);
 			}
 		} else {
-			postDataToServer(request);
+			sendDataToSource(request);
 		}
 	}
 });
@@ -112,7 +112,7 @@ function startReporting() {
 				'detail': 'Reporting - Started',
 				'timestamp': Date.now()
 			}
-			postDataToServer(obj);
+			sendDataToSource(obj);
 		}
 	} else {
 		stopReporting();
@@ -131,7 +131,7 @@ function stopReporting() {
 			'timestamp': Date.now(),
 			'override': true
 		}
-		postDataToServer(obj);
+		sendDataToSource(obj);
 	}
 }
 
@@ -173,17 +173,14 @@ function getZoomAndSend(id, x, y) {
 }
 
 // Add on session ID and send event to the server
-function postDataToServer(data) {
+function sendDataToSource(data) {
 	if(reporting || data.hasOwnProperty('override')) {
 		if(privateMode) {
 			data = privacyFilter(data);
 		}
 		if(data) { // Data will be null if it shouldn't be reported at all
 			data['id'] = sessionId;
-			var xmlhttp = new XMLHttpRequest();
-			xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
-			xmlhttp.setRequestHeader('Content-Type', 'application/json');
-			xmlhttp.send(JSON.stringify(data));
+			ws.send(JSON.stringify(data));
 		}
 	}
 }
