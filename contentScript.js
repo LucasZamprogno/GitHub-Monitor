@@ -341,7 +341,7 @@ function checkForTargetChange(x, y) {
 		var found = $(viewed).closest(identifier);
 		if(found.length) {
 			// Ugly hardcoding
-			if(found.hasClass('js-expandable-line')) {
+			if(found[0].nodeName == 'TR' && found[0].hasAttribute('data-position')) {
 				// Ignore the code breaks in a diff
 				break;
 			}
@@ -350,12 +350,21 @@ function checkForTargetChange(x, y) {
 			break;
 		}
 	}
-	if(lastTarget && targettedElement) { // Past and current element are both targets
-		if(!(lastTarget.is(targettedElement))) {
+	// If somehthing goes wrong, set last gaze to null so it never gets stuck on a bad element
+	try {
+		if(lastTarget && targettedElement) { // Past and current element are both targets
+			if(!(lastTarget.is(targettedElement))) {
+				handleGazeEvent(targettedElement, targettedIdentifier, null);
+			} 
+		} else if (lastTarget || targettedElement) { // Only one is/was is a target, definitely changed
 			handleGazeEvent(targettedElement, targettedIdentifier, null);
-		} 
-	} else if (lastTarget || targettedElement) { // Only one is/was is a target, definitely changed
-		handleGazeEvent(targettedElement, targettedIdentifier, null);
+		}
+	} catch (e) {
+		console.log('Something went wrong parsing ' + targettedIdentifier + ':');
+		console.log(targettedElement);
+		console.log(e.message);
+		lastTarget = null;
+		lastIdentifier = null;
 	}
 };
 
