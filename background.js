@@ -3,13 +3,14 @@ var WEBSOCKET_PORT = 2366; // Tobii app websocket port
 var GAZE_LOSS_TIMEOUT = 500; // How much time can pass before deciding the user has looked/moved away
 var GAZE_LOSS_WAIT = 100; // How often to check if the user has looked/moved away
 var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app websocket server
+var PRIVCAY_DEFAULTS = ['everything']; // Privacy settings to be selected upon first install
 
 // Note: All values stored in localStorage are always stored as strings. May be converted implicitly.
 
 // Short-circuit first time setup. Should only ever happen after initial install
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
-(typeof localStorage['privacyFilters'] === 'undefined') && setLocal('privacyFilters', JSON.stringify(['everything']));
+(typeof localStorage['privacyFilters'] === 'undefined') && setLocal('privacyFilters', JSON.stringify(PRIVCAY_DEFAULTS));
 
 var reporting = getLocal('reporting');
 var sessionId = getLocal('sessionId');
@@ -179,8 +180,11 @@ function sendDataToSource(data) {
 function updatePopupGazeStatus(status) {
 	chrome.runtime.sendMessage({'status': status});
 }
-
-// Substitute any unwanted information, or return null if the event should not be reported at all
+/*
+Substitute any unwanted information, or return null if the event should not be reported at all
+To add a privacy setting, add an input field to popup.html with class="privacy"
+and a unique ID, then add a case here that matches that id.
+*/
 function privacyFilter(obj) {
 	for(var filter of privacyFilters) {
 		switch(filter) {
@@ -197,6 +201,14 @@ function privacyFilter(obj) {
 			case 'url':
 				if(obj.hasOwnProperty('pageHref')) {
 					obj['pageHref'] = stringHash(obj['pageHref']).toString();
+				}
+				break;
+			case 'file':
+				if(obj.hasOwnProperty('file')) { // File as property of code gaze
+					obj['file'] = stringHash(obj['file']).toString();
+				}
+				if(obj['target'].indexOf('File: ') === 0) { // File as target of event
+					obj['target'] = 'File: ' + stringHash(obj['target'].substring(6));
 				}
 				break;
 			case 'metadata':

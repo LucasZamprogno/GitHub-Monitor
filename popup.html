@@ -37,6 +37,7 @@
 				</div>
 			</div>
 			<div id="tab2">
+				<!-- All input fields must have (unique obviously) IDs -->
 				<input type="checkbox" class="privacy" id="google">
 				<label for="google" title="Default behaviour: Records the titles of google search results.&#013;Enabling this changes that to only 'Google Result'.">
 					Hide Google results
@@ -46,8 +47,12 @@
 					Stop untracked domain reporting
 				</label><br>
 				<input type="checkbox" class="privacy" id="url">
-				<label for="url" title="Hash URLs (non-reversable) and don't report page titles">
-					Hide page data (title, url)
+				<label for="url" title="Hash URLs and don't report page titles">
+					Mask page data (title, url)
+				</label><br>
+				<input type="checkbox" class="privacy" id="file">
+				<label for="file" title="Hash file names">
+					Mask file names
 				</label><br>
 				<p>Code elements to report. Each option includes the one(s) above it.</p>
 				<form>

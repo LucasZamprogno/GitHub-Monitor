@@ -336,7 +336,6 @@ function checkForTargetChange(x, y) {
 	var viewed = document.elementFromPoint(x, y);
 	var targettedIdentifier = null;
 	var targettedElement = null;
-
 	// Check each target key to see if currently viewed element is a child of it
 	for(var identifier in getCurrentTargets()) {
 		var found = $(viewed).closest(identifier);
@@ -351,7 +350,6 @@ function checkForTargetChange(x, y) {
 			break;
 		}
 	}
-	
 	if(lastTarget && targettedElement) { // Past and current element are both targets
 		if(!(lastTarget.is(targettedElement))) {
 			handleGazeEvent(targettedElement, targettedIdentifier, null);
