@@ -37,25 +37,37 @@
 				</div>
 			</div>
 			<div id="tab2">
-				<input type="checkbox" id="private-mode">
-				<label for="private-mode">Hide certain details</label><br>
-				<p>Details to hide:</p>
 				<input type="checkbox" class="privacy" id="google">
-				<label for ="google" title="Default behaviour: Records the titles of google search results.&#013;Enabling this changes that to only 'Google Result'.">
-					Google results
+				<label for="google" title="Default behaviour: Records the titles of google search results.&#013;Enabling this changes that to only 'Google Result'.">
+					Hide Google results
 				</label><br>
 				<input type="checkbox" class="privacy" id="domains">
-				<label for ="domains" title="Default behaviour: Records the domain of any page looked at, but no more (e.g. 'reddit').&#013;Enabling this disables this recording completely.">
-					Global domain level reporting
+				<label for="domains" title="Default behaviour: Records the domain of any page looked at, but no more (e.g. 'reddit').&#013;Enabling this disables this recording completely.">
+					Stop untracked domain reporting
 				</label><br>
-				<input type="checkbox" class="privacy" id="code">
-				<label for ="code" title="Default behaviour: Records the actual code looked at in diffs.&#013;Enabling this removes the code (leaving details like line number, addition/deletion).">
-					Code from diffs
+				<input type="checkbox" class="privacy" id="url">
+				<label for="url" title="Hash URLs (non-reversable) and don't report page titles">
+					Hide page data (title, url)
 				</label><br>
-				<input type="checkbox" class="privacy" id="program">
-				<label for ="program" title="Default behaviour: Records changes in the active program on the machine.&#013;Enabling this will record a 'program change' but no details about the program.">
-					Active program (N/A)
-				</label><br>
+				<p>Code elements to report. Each option includes the one(s) above it.</p>
+				<form>
+					<input type="radio" class="privacy" name="code" value="metadata" id="metadata">
+					<label for="metadata" title="Line length, indentation, line numbers">
+						Metadata only
+					</label><br>
+					<input type="radio" class="privacy" name="code" value="symbols" id="symbols">
+					<label for="symbols" title="Braces/parenthesis, operators, whitespace&#013;E.g. (, ){  + ;}">
+						Symbols
+					</label><br>
+					<input type="radio" class="privacy" name="code" value="keywords" id="keywords">
+					<label for="keywords" title="Language specific keywords for definition, control flow, etc.&#013;E.g. function, var, return, if, for">
+						Keywords
+					</label><br>
+					<input type="radio" class="privacy" name="code" value="all" id="everything">
+					<label for="all" title="The original unaltered line of code">
+						Everything
+					</label>
+				</form>
 			</div>
 		</div>
 	</body>

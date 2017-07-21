@@ -63,19 +63,6 @@ $(document).ready(function() {
 		bg.stopReporting();
 	});
 
-	$('input#private-mode').click(function(e) {
-		var state = $('input#private-mode').is(':checked');
-		bg.privateMode = state;
-		bg.setLocal('privateMode', state);
-		var obj = {
-			'type': 'setting',
-			'detail': 'Privacy setting - ' + state,
-			'timestamp': Date.now(),
-			'override': true
-		};
-		chrome.runtime.sendMessage(obj);
-	});
-
 	$('button#report-button').click(function(e) {
 		e.preventDefault();
 		if($('textarea#report-area').val() !== '') {
@@ -95,7 +82,7 @@ $(document).ready(function() {
 			if($(this).is(':checked')) {
 				checked.push($(this).attr('id'))
 			}
-		})
+		});
 		bg.updatePrivacySettings(JSON.stringify(checked));
 	})
 })

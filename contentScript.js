@@ -389,8 +389,18 @@ function githubLineDetails(elem) {
 		'change': type,
 		'oldLineNum': oldLineNum,
 		'newLineNum': newLineNum,
+		'length': codeLengthNoWhitespace(codeText),
 		'codeText': codeText
 	};
+}
+
+function codeLengthNoWhitespace(code) {
+	var chars = code.replace(/\s/g,"");
+	return length = chars.length;
+}
+
+function indentationValue(code) {
+	// TODO
 }
 
 // Get the specifics of a line of code (line numbers, code text)

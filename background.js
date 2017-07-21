@@ -9,12 +9,10 @@ var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app webso
 // Short-circuit first time setup. Should only ever happen after initial install
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
-(typeof localStorage['privateMode'] === 'undefined') && setLocal('privateMode', false);
-(typeof localStorage['privacyFilters'] === 'undefined') && setLocal('privacyFilters', JSON.stringify([]));
+(typeof localStorage['privacyFilters'] === 'undefined') && setLocal('privacyFilters', JSON.stringify(['everything']));
 
 var reporting = getLocal('reporting');
 var sessionId = getLocal('sessionId');
-var privateMode = getLocal('privateMode');
 var privacyFilters = getLocal('privacyFilters');
 var ws;
 var attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
@@ -83,12 +81,6 @@ function getLocal(key) {
 				return null
 			} else {
 				return val;
-			}
-		case 'privateMode':
-			if(val === 'false') {
-				return false;
-			} else {
-				return true;
 			}
 		case 'privacyFilters':
 			return JSON.parse(val);
@@ -175,9 +167,8 @@ function getZoomAndSend(id, x, y) {
 // Add on session ID and send event to the server
 function sendDataToSource(data) {
 	if(reporting || data.hasOwnProperty('override')) {
-		if(privateMode) {
-			data = privacyFilter(data);
-		}
+		data = privacyFilter(data);
+		console.log(data);
 		if(data) { // Data will be null if it shouldn't be reported at all
 			data['id'] = sessionId;
 			ws.send(JSON.stringify(data));
@@ -199,21 +190,56 @@ function privacyFilter(obj) {
 				}
 				break;
 			case 'domains':
-				if(obj['domain']) {
-					return null;
+				if(obj['type'] == 'pageView') {
+					obj['domain'] = 'Redacted';
 				}
 				break;
-			case 'code':
+			case 'url':
+				if(obj.hasOwnProperty('pageHref')) {
+					obj['pageHref'] = stringHash(obj['pageHref']).toString();
+				}
+				break;
+			case 'metadata':
 				if(obj['target'] === 'code') {
 					delete obj['codeText'];
 				}
 				break;
-			case 'program':
-				//
+			case 'symbols':
+				if(obj['target'] === 'code') {
+					obj['codeText'] = symbolsOnly(obj['codeText']);
+				}
+				break;
+			case 'keywords':
+				if(obj['target'] === 'code') {
+					// Do a thing
+				}
 				break;
 		}
 	}
 	return obj;
+}
+
+// From http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
+function stringHash(string) {
+	var hash = 0;
+	if (string.length == 0) {
+		return hash;
+	}
+	for (i = 0; i < string.length; i++) {
+		char = string.charCodeAt(i);
+		hash = ((hash<<5)-hash)+char;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+	return hash;
+}
+
+// Remove all alphanumeric
+function symbolsOnly(code) {
+	return code.replace(/[a-zA-Z0-9]/g, '');
+}
+
+function symbolsAndKeyWords(code) {
+	// TODO
 }
 
 function setBadge() {
