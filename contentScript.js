@@ -378,21 +378,29 @@ function githubLineDetails(elem) {
 	var codeElem = $(elem).find('td.blob-code');
 	var codeText = codeElem.find('span.blob-code-inner').text();
 	var type;
+	var indentType = 'none'; // space, tab, or none
+	var indentValue = 0;
 	if(codeElem.hasClass('blob-code-context')) {
 		type = 'unchanged';
 	} else if(codeElem.hasClass('blob-code-addition')) {
 		type = 'addition';
-		codeText = codeText.substring(1);
 	} else if(codeElem.hasClass('blob-code-deletion')) {
 		type = 'deletion';
-		codeText = codeText.substring(1);
 	} else { // Hopefully shouldn't happen
 		type = 'unknown';
-		codeText = null;
+		codeText = '';
 	}
-	if(codeText) {
+	if(codeText !== '') {
+		codeText = codeText.substring(1); // Remove +, -, or space
+		if(codeText[0] === '\t') {
+			indentType = 'tab';			
+		} else if(codeText[0] === ' ') {
+			indentType = 'space';
+		}
+		if(indentType !== 'none') {
+			indentValue = indentationValue(codeText);
+		}
 		codeText = codeText.trim();
-		
 	}
 	return {
 		'file': file,
@@ -400,6 +408,8 @@ function githubLineDetails(elem) {
 		'oldLineNum': oldLineNum,
 		'newLineNum': newLineNum,
 		'length': codeLengthNoWhitespace(codeText),
+		'indentType': indentType,
+		'indentValue': indentValue,
 		'codeText': codeText
 	};
 }
@@ -408,13 +418,18 @@ function codeLengthNoWhitespace(code) {
 	if(code) {
 		var chars = code.replace(/\s/g,"");
 		return chars.length;
-	} else {
-		return 0;
 	}
+	return 0;
 }
 
 function indentationValue(code) {
-	// TODO
+	var depth = 0;
+	var i = 0;
+	while(i < code.length && code[i] === code[0]) {
+		depth++;
+		i++
+	}
+	return depth;
 }
 
 // Get the specifics of a line of code (line numbers, code text)
