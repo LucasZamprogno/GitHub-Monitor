@@ -380,16 +380,19 @@ function githubLineDetails(elem) {
 	var type;
 	if(codeElem.hasClass('blob-code-context')) {
 		type = 'unchanged';
-		codeText = codeText.trim();
 	} else if(codeElem.hasClass('blob-code-addition')) {
 		type = 'addition';
-		codeText = codeText.substring(1).trim();
+		codeText = codeText.substring(1);
 	} else if(codeElem.hasClass('blob-code-deletion')) {
 		type = 'deletion';
-		codeText = codeText.substring(1).trim();
+		codeText = codeText.substring(1);
 	} else { // Hopefully shouldn't happen
 		type = 'unknown';
 		codeText = null;
+	}
+	if(codeText) {
+		codeText = codeText.trim();
+		
 	}
 	return {
 		'file': file,
@@ -402,8 +405,12 @@ function githubLineDetails(elem) {
 }
 
 function codeLengthNoWhitespace(code) {
-	var chars = code.replace(/\s/g,"");
-	return length = chars.length;
+	if(code) {
+		var chars = code.replace(/\s/g,"");
+		return chars.length;
+	} else {
+		return 0;
+	}
 }
 
 function indentationValue(code) {
