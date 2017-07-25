@@ -105,18 +105,15 @@ function setLocal(key, val) {
 
 // Allow reporting of events to the server, set icon accordingly
 function startReporting() {
-	var wasReporting = reporting;
 	if(sessionId) { // Hopefully not possible for sessionId to not be set, but just in case
 		reporting = true;
 		setLocal('reporting', true);
-		if(!wasReporting) {
-			var obj = {
-				'type': 'setting',
-				'detail': 'Reporting - Started',
-				'timestamp': Date.now()
-			}
-			sendDataToSource(obj);
+		var obj = {
+			'type': 'setting',
+			'detail': 'Reporting - Started',
+			'timestamp': Date.now()
 		}
+		sendDataToSource(obj);
 	} else {
 		stopReporting();
 	}
@@ -124,18 +121,15 @@ function startReporting() {
 
 // Prevent reporting to the server, set icon accordingly
 function stopReporting() {
-	var wasReporting = reporting;
 	reporting = false;
 	setLocal('reporting', false);
-	if(wasReporting) {
-		var obj = {
-			'type': 'setting',
-			'detail': 'Reporting - Stopped',
-			'timestamp': Date.now(),
-			'override': true
-		}
-		sendDataToSource(obj);
+	var obj = {
+		'type': 'setting',
+		'detail': 'Reporting - Stopped',
+		'timestamp': Date.now(),
+		'override': true
 	}
+	sendDataToSource(obj);
 }
 
 // Takes a string of the details selected in the popup that will not be reported on
