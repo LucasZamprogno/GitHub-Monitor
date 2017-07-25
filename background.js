@@ -32,9 +32,9 @@ chrome.runtime.onMessage.addListener(messageListener);
 
 function messageListener(request, sender, sendResponse) {
 	if(sender.hasOwnProperty('tab')) { 
-		switch(request['bg']) {
+		switch(request['comType']) {
 			case 'event': // Event of any sort to be saved in the dataset
-				delete request['bg'];
+				delete request['comType'];
 				sendDataToSource(request);
 				break;
 			case 'gaze': // Fake gaze data from cursor
@@ -151,7 +151,7 @@ function checkForGazeLoss() {
 		updatePopupGazeStatus('disconnected');
 		chrome.tabs.query({active: true}, function(tabs) {
 			for(var tab of tabs) {
-				chrome.tabs.sendMessage(tab.id, {'gazeLoss': null, 'timestamp': lastCommunication});
+				chrome.tabs.sendMessage(tab.id, {'comType': 'gazeLoss', 'timestamp': lastCommunication});
 			}
 		});
 		clearInterval(gazeLossInterval);
@@ -171,7 +171,7 @@ function sendCoordToActiveTabs(x, y) {
 // If this isn't wrapped in a function it fails when done quickly in succession
 function getZoomAndSend(id, x, y) {
 	chrome.tabs.getZoom(id, function(zoomFactor){
-		chrome.tabs.sendMessage(id, {'x': x, 'y': y, 'zoom': zoomFactor});
+		chrome.tabs.sendMessage(id, {'comType': 'coord', 'x': x, 'y': y, 'zoom': zoomFactor});
 	});
 }
 

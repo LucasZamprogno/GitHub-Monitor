@@ -119,8 +119,6 @@ var tracked = isTracked(); // Is this a page we have target HTML elements for
 
 addAllListeners();
 
-setMessageListener();
-
 if(!tracked) {
 	setPageViewInterval();
 }
@@ -129,11 +127,9 @@ if(!tracked) {
 Startup/maintenance functions
 ****************************/
 
-// Listen for coordinates from background.js, report when nesessary
-function setMessageListener() {
-	chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-		// If the message has coordinates
-		if(request.hasOwnProperty('x') && request.hasOwnProperty('y')) {
+function messageListener(request, sender, sendResponse) {
+	switch(request['comType']) {
+		case 'coord':
 			var x = request['x'];
 			var y = request['y'];
 			var zoom = request['zoom'];
@@ -156,10 +152,11 @@ function setMessageListener() {
 					lastGaze = Date.now();
 				}
 			}
-		} else if(request.hasOwnProperty('gazeLoss')) {
-			handleGazeLoss(request['timestamp']);
-		}
-	});
+			break;
+		case 'gazeLoss':
+			handleGazeLoss(request['timestamp'])
+			break;
+	}
 }
 
 // Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
@@ -204,6 +201,9 @@ function setPageViewInterval() {
 
 // All lsitenres and intervals to be added at launch
 function addAllListeners() {
+	// Listen for messages from background page
+	chrome.runtime.onMessage.addListener(messageListener);
+
 	// Listeners for target events, these bubble up from their source
 	document.addEventListener('click', genericEventHandler);
 	document.addEventListener('dblclick', genericEventHandler);
@@ -318,7 +318,7 @@ function bitbucketFileMouseEventHandler(event, target) {
 // Object creating funciton just for cleanliness
 function eventInteractionObject(type, target) {
 	return {
-		'bg': 'event',
+		'comType': 'event',
 		'type': type,
 		'target': target,
 		'timestamp': Date.now(),
@@ -466,7 +466,7 @@ function bitbucketLineDetails(elem) {
 // For gazes on a target
 function gazeInteractionObject(target, start, end) {
 	var obj = {
-		'bg': 'event'
+		'comType': 'event'
 	};
 	obj['type'] = 'gaze';
 	if(typeof target !== 'string') {
@@ -490,7 +490,7 @@ function gazeInteractionObject(target, start, end) {
 // For gazes on an untracked (no specified target elements) page
 function pageViewObject() {
 	return {
-		'bg': 'event',
+		'comType': 'event',
 		'type': 'pageView',
 		'timestamp': gazeStart,
 		'timestampEnd': lastGaze,
@@ -528,7 +528,7 @@ function handleGazeLoss(timestamp) {
 		pageViewInterval = null;
 	}
 	var obj = {
-		'bg': 'event',
+		'comType': 'event',
 		'type': 'gazeLoss',
 		'timestamp': timestamp
 	}
@@ -538,7 +538,7 @@ function handleGazeLoss(timestamp) {
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function imposterGazeEvent(xPos, yPos) {
 	var obj = {
-		'bg': 'gaze',
+		'comType': 'gaze',
 		'x': xPos,
 		'y': yPos,
 		'timestamp': Date.now()
