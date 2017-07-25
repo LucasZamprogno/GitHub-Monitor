@@ -28,18 +28,28 @@ if(reporting) {
 }
 
 // Pass data from content scripts on to server OR pass mouse coordinates back to scripts
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if(sender.hasOwnProperty('tab')) {
-		if(request.hasOwnProperty('x')) { // This is only for mouse input for development
-			registerCommunication();
-			if(reporting) {
-				sendCoordToActiveTabs(request['x'], request['y']);
-			}
-		} else {
-			sendDataToSource(request);
+chrome.runtime.onMessage.addListener(messageListener);
+
+function messageListener(request, sender, sendResponse) {
+	if(sender.hasOwnProperty('tab')) { 
+		switch(request['bg']) {
+			case 'event': // Event of any sort to be saved in the dataset
+				delete request['bg'];
+				sendDataToSource(request);
+				break;
+			case 'gaze': // Fake gaze data from cursor
+				registerCommunication();
+				if(reporting) {
+					sendCoordToActiveTabs(request['x'], request['y']);
+				}
+				// do
+				break;
+			case 'diff': // Diff metadata to be saved in the dataset
+				// do
+				break;
 		}
 	}
-});
+}
 
 // Connect to Tobii app websocket server
 function connectToTracker() {

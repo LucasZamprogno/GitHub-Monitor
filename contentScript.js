@@ -318,6 +318,7 @@ function bitbucketFileMouseEventHandler(event, target) {
 // Object creating funciton just for cleanliness
 function eventInteractionObject(type, target) {
 	return {
+		'bg': 'event',
 		'type': type,
 		'target': target,
 		'timestamp': Date.now(),
@@ -464,7 +465,9 @@ function bitbucketLineDetails(elem) {
 
 // For gazes on a target
 function gazeInteractionObject(target, start, end) {
-	var obj = {};
+	var obj = {
+		'bg': 'event'
+	};
 	obj['type'] = 'gaze';
 	if(typeof target !== 'string') {
 		obj['target'] = 'code';
@@ -474,6 +477,7 @@ function gazeInteractionObject(target, start, end) {
 	} else {
 		obj['target'] = target;
 	}
+	// These all could be set at declaration but it would change the key order, useful when looking at data manually
 	obj['timestamp'] = start;
 	obj['timestampEnd'] = end;
 	obj['duration'] = end - start;
@@ -485,13 +489,14 @@ function gazeInteractionObject(target, start, end) {
 
 // For gazes on an untracked (no specified target elements) page
 function pageViewObject() {
-	var obj = {};
-	obj['type'] = 'pageView';
-	obj['timestamp'] = gazeStart;
-	obj['timestampEnd'] = lastGaze;
-	obj['duration'] = lastGaze - gazeStart;
-	obj['domain'] = window.location.hostname;
-	return obj;
+	return {
+		'bg': 'event',
+		'type': 'pageView',
+		'timestamp': gazeStart,
+		'timestampEnd': lastGaze,
+		'duration': lastGaze - gazeStart,
+		'domain': window.location.hostname
+	}
 }
 
 // Gaze has changed, report the completed gaze to background.js, set new gaze data
@@ -523,6 +528,7 @@ function handleGazeLoss(timestamp) {
 		pageViewInterval = null;
 	}
 	var obj = {
+		'bg': 'event',
 		'type': 'gazeLoss',
 		'timestamp': timestamp
 	}
@@ -532,6 +538,7 @@ function handleGazeLoss(timestamp) {
 // Substitute for data being sent from eyetracker, sends cursor position to server
 function imposterGazeEvent(xPos, yPos) {
 	var obj = {
+		'bg': 'gaze',
 		'x': xPos,
 		'y': yPos,
 		'timestamp': Date.now()
