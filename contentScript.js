@@ -140,7 +140,7 @@ function messageListener(request, sender, sendResponse) {
 			}
 			if(tracked) {
 				if(calibrated) {
-					checkForTargetChange(x, y);
+					handleNewGaze(x, y);
 				}
 			} else { // Untracked
 				// If the gaze falls on this page
@@ -332,8 +332,7 @@ function eventInteractionObject(type, target) {
 Gaze Monitoring Functions
 ************************/
 
-// Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
-function checkForTargetChange(x, y) {
+function handleNewGaze(x, y) {
 	var viewed = document.elementFromPoint(x, y);
 	var targettedIdentifier = null;
 	var targettedElement = null;
@@ -351,7 +350,12 @@ function checkForTargetChange(x, y) {
 			break;
 		}
 	}
-	// If somehthing goes wrong, set last gaze to null so it never gets stuck on a bad element
+
+	checkForTargetChange(targettedIdentifier, targettedElement);
+}
+
+// Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
+function checkForTargetChange(targettedIdentifier, targettedElement) {
 	try {
 		if(lastTarget && targettedElement) { // Past and current element are both targets
 			if(!(lastTarget.is(targettedElement))) {
@@ -364,6 +368,7 @@ function checkForTargetChange(x, y) {
 		console.log('Something went wrong parsing ' + targettedIdentifier + ':');
 		console.log(targettedElement);
 		console.log(e.message);
+		// If somehthing goes wrong, set last gaze to null so it never gets stuck on a bad element
 		lastTarget = null;
 		lastIdentifier = null;
 	}

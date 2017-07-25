@@ -179,7 +179,6 @@ function getZoomAndSend(id, x, y) {
 function sendDataToSource(data) {
 	if(reporting || data.hasOwnProperty('override')) {
 		data = privacyFilter(data);
-		console.log(data);
 		if(data) { // Data will be null if it shouldn't be reported at all
 			data['id'] = sessionId;
 			ws.send(JSON.stringify(data));
@@ -217,22 +216,22 @@ function privacyFilter(obj) {
 				if(obj.hasOwnProperty('file')) { // File as property of code gaze
 					obj['file'] = stringHash(obj['file']).toString();
 				}
-				if(obj['target'].indexOf('File: ') === 0) { // File as target of event
+				if(obj.hasOwnProperty('target') && obj['target'].indexOf('File: ') === 0) { // File as target of event
 					obj['target'] = 'File: ' + stringHash(obj['target'].substring(6));
 				}
 				break;
 			case 'metadata':
-				if(obj['target'] === 'code') {
+				if(obj.hasOwnProperty('target') && obj['target'] === 'code') {
 					delete obj['codeText'];
 				}
 				break;
 			case 'symbols':
-				if(obj['target'] === 'code') {
+				if(obj.hasOwnProperty('target') && obj['target'] === 'code') {
 					obj['codeText'] = symbolsOnly(obj['codeText']);
 				}
 				break;
 			case 'keywords':
-				if(obj['target'] === 'code') {
+				if(obj.hasOwnProperty('target') && obj['target'] === 'code') {
 					// Do a thing
 				}
 				break;
