@@ -237,8 +237,8 @@ function extractMetadata(elem) {
 	};
 }
 
-// arr must be sorted already
 function median(arr) {
+	arr.sort(function(a,b){return a-b;});
 	if(arr.length === 0) {
 		return 0;
 	}
