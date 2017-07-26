@@ -1,4 +1,4 @@
-var mouseInput = true; // Using the mouse to fake gaze data?
+var mouseInput = false; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var githubTargets = { // Some pretty useless things are commented out in case we want them later
@@ -157,7 +157,6 @@ function messageListener(request, sender, sendResponse) {
 			handleGazeLoss(request['timestamp'])
 			break;
 		case 'diff':
-			console.log('started');
 			if(request['pageHref'] !== window.location.href) {
 				return; // User left the page already
 			}
@@ -168,7 +167,6 @@ function messageListener(request, sender, sendResponse) {
 				'file': request['file']
 			};
 			$('div.file').each(function(index) {
-				console.log('found file');
 				var filename = $(this).find('div.file-header > div.file-info > a').attr('title');
 				if(filename === request['file']) {
 					var data = extractMetadata(this);
