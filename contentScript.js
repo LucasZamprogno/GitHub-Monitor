@@ -1,4 +1,4 @@
-var mouseInput = false; // Using the mouse to fake gaze data?
+var mouseInput = true; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var githubTargets = { // Some pretty useless things are commented out in case we want them later
@@ -156,6 +156,99 @@ function messageListener(request, sender, sendResponse) {
 		case 'gazeLoss':
 			handleGazeLoss(request['timestamp'])
 			break;
+		case 'diff':
+			console.log('started');
+			if(request['pageHref'] !== window.location.href) {
+				return; // User left the page already
+			}
+			var diffInfo = {
+				'comType': 'diff',
+				'type': 'diff',
+				'pageHref': request['pageHref'],
+				'file': request['file']
+			};
+			$('div.file').each(function(index) {
+				console.log('found file');
+				var filename = $(this).find('div.file-header > div.file-info > a').attr('title');
+				if(filename === request['file']) {
+					var data = extractMetadata(this);
+					for(var key in data) {
+						diffInfo[key] = data[key];
+					}
+					chrome.runtime.sendMessage(diffInfo);
+					return false; // break each loop
+				} else {
+					return true; // continue in to next each loop iteration
+				}
+			});
+			break;
+	}
+}
+
+function extractMetadata(elem) {
+	var rows = $(elem).find('div.js-file-content > div.data > table.diff-table > tbody > tr');
+	if(rows.length < 1) {
+		return null;
+	}
+	var lengths = [];
+	var indentations = [];
+	var additions = 0;
+	var deletions = 0;
+	var unchanged = 0;
+	var indentType = 'none';
+	rows.each(function(index) {
+		try {
+			var line = githubLineDetails(this);
+			lengths.push(line['length']);
+			indentations.push(line['indentValue']);
+			if(line['indentType'] !== 'none') {
+				if(indentType === 'none') {
+					indentType = line['indentType'];
+				} else if(line['indentType'] !== indentType) {
+					indentType = 'mixed';
+				}
+			}
+			switch(line['change']) {
+				case 'addition':
+					additions++;
+					break;
+				case 'deletion':
+					deletions++;
+					break;
+				case 'unchanged':
+					unchanged++;
+					break;
+			}
+		} catch (e) {
+			return true; // invalid line, skip
+		}
+	});
+	var totalLines = additions + deletions + unchanged;
+	return {
+		'totalLines': totalLines,
+		'additionPercentage': additions / totalLines,
+		'deletionPercentage': deletions / totalLines,
+		'unchangedPercentage': unchanged / totalLines,
+		'indentType': indentType,
+		'medianIndent': median(indentations),
+		'minIndent': Math.min.apply(Math, indentations), // From https://stackoverflow.com/questions/1669190/find-the-min-max-element-of-an-array-in-javascript
+		'maxIndent': Math.max.apply(Math, indentations),
+		'medianLength': median(lengths),
+		'minLength': Math.min.apply(Math, lengths),
+		'maxLength': Math.max.apply(Math, lengths)
+	};
+}
+
+// arr must be sorted already
+function median(arr) {
+	if(arr.length === 0) {
+		return 0;
+	}
+	var mid = Math.floor(arr.length/2);
+	if(arr.length % 2) { // Odd
+		return arr[mid]
+	} else {
+		return (arr[mid - 1] + arr[mid]) / 2;
 	}
 }
 
@@ -570,7 +663,7 @@ function getTargetDescription(key, elem) {
 		return 'Untracked';
 	}
 	switch(key) {
-		case 'div.file': // Github file name
+		case 'div.file': // Github file (inc diffs)
 			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
 		case 'li.commit': // Github commit
 			var data = elem.attr('data-channel');

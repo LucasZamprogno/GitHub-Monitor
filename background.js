@@ -20,6 +20,7 @@ var attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CO
 var gazeLossInterval = null;
 var badgeUpdates = setInterval(function() { setBadge() }, 250);
 var lastCommunication = null;
+var savedDiffs = [];
 
 if(reporting) {
 	startReporting();
@@ -34,6 +35,12 @@ function messageListener(request, sender, sendResponse) {
 	if(sender.hasOwnProperty('tab')) { 
 		switch(request['comType']) {
 			case 'event': // Event of any sort to be saved in the dataset
+				if(request['type'] === 'gaze' && request['target'] === 'code' && isFromNewDiff(request)) {
+					var diff = {'pageHref': request['pageHref'], 'file': request['file']};
+					savedDiffs.push(diff);
+					diff['comType'] = 'diff';
+					chrome.tabs.sendMessage(sender['tab'].id, diff);
+				}
 				delete request['comType'];
 				sendDataToSource(request);
 				break;
@@ -45,7 +52,8 @@ function messageListener(request, sender, sendResponse) {
 				// do
 				break;
 			case 'diff': // Diff metadata to be saved in the dataset
-				// do
+				delete request['comType'];
+				sendDataToSource(request);
 				break;
 		}
 	}
@@ -182,6 +190,15 @@ function sendDataToSource(data) {
 
 function updatePopupGazeStatus(status) {
 	chrome.runtime.sendMessage({'status': status});
+}
+
+function isFromNewDiff(obj) {
+	for(var diff of savedDiffs) {
+		if(diff['pageHref'] === obj['pageHref'] && diff['file'] === obj['file']) {
+			return false;
+		}
+	}
+	return true;
 }
 /*
 Substitute any unwanted information, or return null if the event should not be reported at all
