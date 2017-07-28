@@ -377,11 +377,12 @@ function handleGazeLoss(timestamp) {
 }
 
 // For when background.js requests diff info because a gaze fell on a diff
-function extractMetadata(elem) {
-	var rows = $(elem).find('div.js-file-content > div.data > table.diff-table > tbody > tr');
+function extractMetadata(file) {
+	var rows = $(file).find('div.js-file-content > div.data > table.diff-table > tbody > tr');
 	if(rows.length < 1) {
 		return null;
 	}
+	var rowData = [];
 	var lengths = [];
 	var indentations = [];
 	var additions = 0;
@@ -389,8 +390,10 @@ function extractMetadata(elem) {
 	var unchanged = 0;
 	var indentType = 'none';
 	rows.each(function(index) {
-		try {
-			var line = githubLineDetails(this);
+		var elem = $(this);
+		rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
+		if(!isCodeMarker(elem) && !isExpandableLine(elem)) {
+			var line = githubLineDetails(elem);
 			lengths.push(line['length']);
 			indentations.push(line['indentValue']);
 			if(line['indentType'] !== 'none') {
@@ -411,8 +414,8 @@ function extractMetadata(elem) {
 					unchanged++;
 					break;
 			}
-		} catch (e) {
-			return true; // invalid line, skip
+		} else {
+			return true; // Skip the line
 		}
 	});
 	var totalLines = additions + deletions + unchanged;
@@ -427,7 +430,8 @@ function extractMetadata(elem) {
 		'maxIndent': Math.max.apply(Math, indentations),
 		'medianLength': median(lengths),
 		'minLength': Math.min.apply(Math, lengths),
-		'maxLength': Math.max.apply(Math, lengths)
+		'maxLength': Math.max.apply(Math, lengths),
+		'allLineDetails': rowData
 	};
 }
 
@@ -436,6 +440,7 @@ Target Labelling/Data Gathering
 ******************************/
 
 // How to lable the target. Null is untracked, some elements have single lable, some have variable labels
+// key is a key from the target objects, elem is a jQuery object
 function getTargetDescription(key, elem) {
 	if(key == null) {
 		return 'Untracked';
@@ -521,20 +526,29 @@ function githubLineDetails(elem) {
 	};
 }
 
-// Details in the expandable separator lines in a diff
+// Details in the expandable separator lines in a diff (source is the button or the line)
 function expandbleLineDetail(source, elem) {
 	var obj = {
 		'target': source
 	};
 	var text = elem.text().trim()
 	var lineRegex = new RegExp('\\d+,\\d+', 'g');
-	var lines = lineRegex.exec(text)[0].split(',');
-	obj['oldStart'] = parseInt(lines[0]);
-	obj['oldEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
-	lines = lineRegex.exec(text)[0].split(',');
-	obj['newStart'] = parseInt(lines[0]);
-	obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
-	obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
+	var res = lineRegex.exec(text);
+	if(res) {
+		var lines = res[0].split(',');
+		obj['oldStart'] = parseInt(lines[0]);
+		obj['oldEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
+		lines = lineRegex.exec(text)[0].split(',');
+		obj['newStart'] = parseInt(lines[0]);
+		obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
+		obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
+	} else { // Some expandable lines at the bottom have no info at all
+		obj['oldStart'] = null;
+		obj['oldEnd'] = null;
+		obj['newStart'] = null;
+		obj['newEnd'] = null;
+		obj['codeText'] = '';
+	}
 	return obj;
 }
 
@@ -684,6 +698,7 @@ function median(arr) {
 
 // These are the blue lines in diffs that are NOT expandable
 function isCodeMarker(elem) {
+	// [0] is to extract the HTML element for the hasAttribute method. Uglier to check with jQuery
 	return elem[0].hasAttribute('data-position') && !elem.hasClass('js-expandable-line');
 }
 

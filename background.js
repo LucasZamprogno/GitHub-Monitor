@@ -180,6 +180,11 @@ function getZoomAndSend(id, x, y) {
 // Add on session ID and send event to the server
 function sendDataToSource(data) {
 	if(ws && ws.readyState === WebSocket.OPEN && (reporting || data.hasOwnProperty('override'))) {
+		if(data['type'] === 'diff') {
+			for(var i in data['allLineDetails']) {
+				data['allLineDetails'][i] = privacyFilter(data['allLineDetails'][i])
+			}
+		}
 		data = privacyFilter(data);
 		if(data) { // Data will be null if it shouldn't be reported at all
 			data['id'] = sessionId;
