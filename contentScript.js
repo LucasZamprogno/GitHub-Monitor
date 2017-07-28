@@ -463,9 +463,9 @@ function getTargetDescription(key, elem) {
 		case 'a.diff-expander':
 			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
 		case 'table.diff-table > tbody > tr': // Github Diff code line
-			if(elem.hasClass('js-expandable-line')) {
+			if(isExpandableLine(elem)) {
 				return expandbleLineDetail('Expandable line details', elem);
-			} else if(elem[0].hasAttribute('data-position')) {
+			} else if(isCodeMarker(elem)) {
 				return "File start/end marker";
 			}
 			return githubLineDetails(elem);
@@ -523,7 +523,6 @@ function githubLineDetails(elem) {
 
 // Details in the expandable separator lines in a diff
 function expandbleLineDetail(source, elem) {
-	console.log(elem);
 	var obj = {
 		'target': source
 	};
@@ -681,6 +680,16 @@ function median(arr) {
 	} else {
 		return (arr[mid - 1] + arr[mid]) / 2;
 	}
+}
+
+// These are the blue lines in diffs that are NOT expandable
+function isCodeMarker(elem) {
+	return elem[0].hasAttribute('data-position') && !elem.hasClass('js-expandable-line');
+}
+
+// Expandable blue code markers
+function isExpandableLine(elem) {
+	return elem.hasClass('js-expandable-line');
 }
 
 
