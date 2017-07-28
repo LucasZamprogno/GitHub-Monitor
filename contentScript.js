@@ -1,11 +1,9 @@
 var mouseInput = false; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
+var RECALIBRATION_TIME = 1000;
 var githubTargets = { // Some pretty useless things are commented out in case we want them later
 	// General/shared
-	//'div.header': 'Main github header',
-	//'div.repohead': 'Repo header',
-	//'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
 	'a.diff-expander': 'Special case, won\'t see this', // Diff separator expansion button
 	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Code
 	'div.comment': 'Comment',
@@ -13,7 +11,6 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	// Main repo page
 	'div.file-wrap': 'Repo file explorer',
 	'div#readme': 'Repo README',
-	//'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)',
 	// Commits
 	'li.commit': 'Special case, won\'t see this', // Specific commit
 	'div.full-commit': 'Commit header',
@@ -40,45 +37,10 @@ var googleTargets = {
 	'div.kp-blk': 'Related searches',
 	'div.g': 'Special case, won\'t see this'
 };
-var bitbucketTargets = {
-	'div.fbnKxr': 'Navigation menu',
-	// Overview
-	'div#repo-metadata': 'Main repo information',
-	'div#repo-stats': 'Main repo information',
-	'div.readme': 'README',
-	'div#repo-activity': 'Repo activity',
-	// Source
-	'div#inline-dialog-branch-dialog': 'Branch list',
-	'table#source-list': 'File browser', // File/folder
-	'article.readme': 'README',
-	// Commits
-	'table.commit-list > tbody > tr': 'Special case, won\'t see this', // Commit
-	'div.udiff-line': 'Special case, won\'t see this', // Code
-	'div.ellipsis': 'Hidden code expansion button',
-	// Branches
-	'table.branches-list > tbody > tr.iterable-item': 'Special case, won\'t see this', // Branch
-	// Pull requests
-	'div#pull-requests-filter-bar': 'Pull request filters',
-	'tr.pull-request-row': 'Special case, won\'t see this', // Pull request
-	// Specific pull request
-	'div.compare-widget-container': 'Pull request branch details',
-	'div#pullrequest-actions': 'Pull request actions',
-	'header#pull-request-diff-header': 'Pull request information',
-	// Issues
-	'div.filter-container': 'Issue filters',
-	'div.issues-toolbar-right': 'Issue filters',
-	'table.issues-list > tbody > tr': 'Special case, won\'t see this', // Issue
-	// Specific issue
-	'div#issue-main-content': 'Issue content',
-	'li.comment': 'Comment',
-	'li.new-comment': 'New comment field',
-	'div.issue-attrs': 'Issue details',
-}
 var allTargets = {
 	'github': githubTargets,
 	'stackoverflow': stackoverflowTargets,
-	'google': googleTargets,
-	'bitbucket': bitbucketTargets
+	'google': googleTargets
 };
 
 var pageTypeRegex = {
@@ -96,25 +58,26 @@ var pageTypeRegex = {
 	'Stack Overflow question': new RegExp('https:\/\/stackoverflow\.com\/questions\/.+$')
 }
 
-/**************************
-Startup variables/listeners
-**************************/
-var calibrated = false;
-var lastZoom = null;
-var windowXOffset = window.screenX; // Window distance from screen (0,0)
+/*************************************
+Startup/Global Variables and Listeners
+*************************************/
+
+var calibrated = false; // Has a calibration been run
+var lastZoom = null; // Last recorded zoom ratio
+var windowXOffset = window.screenX; // Window (0,0) distance from screen (0,0)
 var windowYOffset = window.screenY; 
-var totalXOffset = null; // Difference between document (0,0) and screen pixel (0,0)
+var totalXOffset = null; // Document (0,0) distance from screen (0,0)
 var totalYOffset = null; 
 
 var lastTarget = null; // Last observerd DOM element
-var lastIdentifier = null; // Identifier of last observed element
-var gazeStart = Date.now(); // Timestamp of when observation of the element began
-var lastGaze = Date.now(); // For page tracking, when was the last time 
+var lastIdentifier = null; // Identifier (e.g. 'li.commit') of last observed element
+var gazeStart = Date.now(); // Timestamp of when observation of an element began
+var lastGaze = Date.now(); // For page tracking, when was the last time a gaze was registered on the page
 
 var recalibrationInterval = null; // How often to check for a window move, starts after first calibration
 var pageViewInterval = null; // How often to check if the user has been looking away from the page
 
-var mouseListenerTimeout = null;
+var mouseListenerTimeout = null; // Used when waiting for DOM changes to finish before adding listeners
 
 var tracked = isTracked(); // Is this a page we have target HTML elements for
 
@@ -184,6 +147,236 @@ function messageListener(request, sender, sendResponse) {
 	}
 }
 
+// Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
+function calibrate(event) {
+	if(lastZoom) { // Needed for calibration
+		totalXOffset = event.screenX - (event.clientX * lastZoom);
+		totalYOffset = event.screenY - (event.clientY * lastZoom);
+		console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
+		recalibrationInterval = setInterval(function() { recalibrate() }, RECALIBRATION_TIME);
+		// Remove this listener
+		document.body.removeEventListener('mousemove', calibrate);
+		calibrated = true;
+	}
+}
+
+// Check if the window has changed and update the offsets
+function recalibrate() {
+	// If the window has moved
+	if(windowXOffset !== window.screenX || windowYOffset !== window.screenY) {
+		var xDiff = window.screenX - windowXOffset;
+		var yDiff = window.screenY - windowYOffset;
+		// Make closest update to new offsets given known information
+		totalXOffset += xDiff;
+		totalYOffset += yDiff;
+		windowXOffset += xDiff;
+		windowYOffset += yDiff;
+		// Get a correct calibration off next mouse move, should only matter if chrome header resized
+		document.body.addEventListener('mousemove', calibrate);
+	}
+}
+
+// How often to check if the user has been looking away from the page
+function setPageViewInterval() {
+	pageViewInterval = setInterval(function(){
+		if(Date.now() - lastGaze > PAGE_VIEW_TIME) {
+			chrome.runtime.sendMessage(pageViewObject());
+			clearInterval(pageViewInterval);
+			pageViewInterval = null;
+		}
+	}, PAGE_VIEW_TIME); 
+}
+
+// All lsitenres and intervals to be added at launch
+function addAllListeners() {
+	// Listen for messages from background page
+	chrome.runtime.onMessage.addListener(messageListener);
+
+	// Listeners for target events, these bubble up from their source element
+	document.addEventListener('click', genericEventHandler);
+	document.addEventListener('dblclick', genericEventHandler);
+	document.addEventListener('cut', genericEventHandler);
+	document.addEventListener('copy', genericEventHandler);
+	document.addEventListener('paste', genericEventHandler);
+	document.addEventListener('contextmenu', genericEventHandler);
+	document.addEventListener('keydown', genericEventHandler)
+	addMouseListeners();
+
+	// Wait for initial calibration
+	document.body.addEventListener('mousemove', calibrate);
+
+	// If using the mouse to simulate gazes, need to listen for mouse moves
+	if(mouseInput) {
+		document.body.addEventListener('mousemove', function(event) {
+			imposterGazeEvent(event.clientX, event.clientY);
+		});
+	}
+
+	if(tracked) {
+		// If the page is no longer visible, end the last gaze event
+		document.addEventListener('visibilitychange', function(event) {
+			if(document.hidden) {
+				handleGazeEvent(null, null, null);
+			}
+		});		
+	} else {
+		// If the page is changing, end the page view
+		window.addEventListener('beforeunload', function(event){
+			chrome.runtime.sendMessage(pageViewObject());
+		})
+	}
+
+	// Set mouse listeners on specific elements once the page has stopped loading new elements
+	var observer = new MutationObserver(mouseListenerDebounce);
+	var config = {
+		subtree: true,
+		attributes: true
+	};
+	observer.observe(document, config);
+}
+
+/*
+After MUTATION_TIMEOUT milliseconds of no DOM mutations, add mouseenter/leave listeners to targets.
+This is needed because some page changes don't refresh the page (setup won't rerun),
+and new listeners may be needed (document listeners will persist so don't need to be added like this).
+Kind of like a debounce function but it waits until signals have stopped before firing.
+*/
+function mouseListenerDebounce(mutations) {
+		if(mouseListenerTimeout === null) { // First DOM change in a while? Set the timer
+			mouseListenerTimeout = setTimeout(function(){
+				addMouseListeners();
+				mouseListenerTimeout = null;
+			}, MUTATION_TIMEOUT);
+		} else { // Timer was already running? Clear it and set a new one (reset to MUTATION_TIMEOUT remaining)
+			clearTimeout(mouseListenerTimeout);
+			mouseListenerTimeout = setTimeout(function(){
+				addMouseListeners();
+				mouseListenerTimeout = null;
+			}, MUTATION_TIMEOUT);
+		}
+	}
+
+// Add mouseenter/mouseleave listeners to any present targets
+function addMouseListeners() {
+	for(var identifier in getCurrentTargets()) {
+		// Ugly hardcoding. Don't add listeners to every line of code. (github || bitbucket)
+		if(identifier === 'table.diff-table > tbody > tr' || identifier === 'div.udiff-line') {
+			continue;
+		}
+		var found = $(identifier);
+		for(var item of found) {
+			item.addEventListener('mouseenter', genericEventHandler);
+			item.addEventListener('mouseleave', genericEventHandler);
+		}
+	}
+	// In place of lines of code, attempt to add listeners to file containers
+	var files = $('div.file');
+	for(var item of files) {
+		item.addEventListener('mouseenter', githubFileMouseEventHandler);
+		item.addEventListener('mouseleave', githubFileMouseEventHandler);
+	}
+	// Bitbucket adding removed
+}
+
+/*************************
+Event Monitoring Functions
+*************************/
+
+// Handles any 'addEventListener' style events
+function genericEventHandler(event) {
+	for(var identifier in getCurrentTargets()) {
+		var found = $(event.target).closest(identifier);
+		if(found.length) {
+			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found))
+			chrome.runtime.sendMessage(obj);
+			break;
+		}
+	}
+}
+
+// Handles the mouseenter/leave events for files since they aren't in the normal list
+function githubFileMouseEventHandler(event, target) {
+	var obj = eventInteractionObject(event.type, getTargetDescription('div.file', event.target));
+	chrome.runtime.sendMessage(obj);
+}
+
+/************************
+Gaze Monitoring Functions
+************************/
+
+function handleNewGaze(x, y) {
+	var viewed = document.elementFromPoint(x, y);
+	var targettedIdentifier = null;
+	var targettedElement = null;
+	// Check each target key to see if currently viewed element is a child of it
+	for(var identifier in getCurrentTargets()) {
+		var found = $(viewed).closest(identifier);
+		if(found.length) {
+			targettedIdentifier = identifier;
+			targettedElement = found;
+			break;
+		}
+	}
+	checkForTargetChange(targettedIdentifier, targettedElement);
+}
+
+// Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
+function checkForTargetChange(targettedIdentifier, targettedElement) {
+	try {
+		if(lastTarget && targettedElement) { // Past and current element are both targets
+			if(!(lastTarget.is(targettedElement))) {
+				handleGazeEvent(targettedElement, targettedIdentifier, null);
+			} 
+		} else if (lastTarget || targettedElement) { // Only one is/was is a target, definitely changed
+			handleGazeEvent(targettedElement, targettedIdentifier, null);
+		}
+	} catch (e) {
+		console.log('Something went wrong parsing ' + targettedIdentifier + ':');
+		console.log(targettedElement);
+		console.log(e.message);
+		// If somehthing goes wrong, set last gaze to null so it never gets stuck on a bad element
+		lastTarget = null;
+		lastIdentifier = null;
+	}
+};
+
+// Gaze has changed, report the completed gaze to background.js, set new gaze data
+// If end is null, uses the current time
+function handleGazeEvent(newElement, newIdentifier, end) {
+	var gazeEnd;
+	if(end) {
+		gazeEnd = end;
+	} else {
+		gazeEnd = Date.now();
+	}
+	if(lastIdentifier && lastTarget) {
+		var descrption = getTargetDescription(lastIdentifier, lastTarget);
+		var obj = gazeInteractionObject(descrption, gazeStart, gazeEnd);
+		chrome.runtime.sendMessage(obj);
+	}
+	lastTarget = newElement;
+	lastIdentifier = newIdentifier;
+	gazeStart = gazeEnd;
+}
+
+// If gazeLoss is recieved from background.js handle it appropriately
+function handleGazeLoss(timestamp) {
+	if(isTracked()) {
+		handleGazeEvent(null, null, timestamp);
+	} else {
+		chrome.runtime.sendMessage(pageViewObject());
+		clearInterval(pageViewInterval);
+		pageViewInterval = null;
+	}
+	var obj = {
+		'comType': 'event',
+		'type': 'gazeLoss',
+		'timestamp': timestamp
+	}
+	chrome.runtime.sendMessage(obj);
+}
+
+// For when background.js requests diff info because a gaze fell on a diff
 function extractMetadata(elem) {
 	var rows = $(elem).find('div.js-file-content > div.data > table.diff-table > tbody > tr');
 	if(rows.length < 1) {
@@ -238,237 +431,48 @@ function extractMetadata(elem) {
 	};
 }
 
-function median(arr) {
-	arr.sort(function(a,b){return a-b;});
-	if(arr.length === 0) {
-		return 0;
+/******************************
+Target Labelling/Data Gathering
+******************************/
+
+// How to lable the target. Null is untracked, some elements have single lable, some have variable labels
+function getTargetDescription(key, elem) {
+	if(key == null) {
+		return 'Untracked';
 	}
-	var mid = Math.floor(arr.length/2);
-	if(arr.length % 2) { // Odd
-		return arr[mid]
-	} else {
-		return (arr[mid - 1] + arr[mid]) / 2;
-	}
-}
-
-// Calculates document/pixel offsets, begins polling for coordinates, removes itself when complete
-function calibrate(event) {
-	if(lastZoom) { // Needed for calibration
-		totalXOffset = event.screenX - (event.clientX * lastZoom);
-		totalYOffset = event.screenY - (event.clientY * lastZoom);
-		console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
-		recalibrationInterval = setInterval(function() { recalibrate() }, 1000);
-		// Remove this listener
-		document.body.removeEventListener('mousemove', calibrate);
-		calibrated = true;
-	}
-}
-
-// Check if the window has changed and update the offsets
-function recalibrate() {
-	// If the window has moved
-	if(windowXOffset !== window.screenX || windowYOffset !== window.screenY) {
-		var xDiff = window.screenX - windowXOffset;
-		var yDiff = window.screenY - windowYOffset;
-		// Make closest update to new offsets given the information
-		totalXOffset += xDiff;
-		totalYOffset += yDiff;
-		windowXOffset += xDiff;
-		windowYOffset += yDiff;
-		// Get a correct calibration off next mouse move, should only matter if header resizes
-		document.body.addEventListener('mousemove', calibrate);
-	}
-}
-
-// How often to check if the user has been looking away from the page
-function setPageViewInterval() {
-	pageViewInterval = setInterval(function(){
-		if(Date.now() - lastGaze > PAGE_VIEW_TIME) {
-			chrome.runtime.sendMessage(pageViewObject());
-			clearInterval(pageViewInterval);
-			pageViewInterval = null;
-		}
-	}, PAGE_VIEW_TIME); 
-}
-
-// All lsitenres and intervals to be added at launch
-function addAllListeners() {
-	// Listen for messages from background page
-	chrome.runtime.onMessage.addListener(messageListener);
-
-	// Listeners for target events, these bubble up from their source
-	document.addEventListener('click', genericEventHandler);
-	document.addEventListener('dblclick', genericEventHandler);
-	document.addEventListener('cut', genericEventHandler);
-	document.addEventListener('copy', genericEventHandler);
-	document.addEventListener('paste', genericEventHandler);
-	document.addEventListener('contextmenu', genericEventHandler);
-	document.addEventListener('keydown', genericEventHandler)
-	addMouseListeners();
-
-	// Do initial calibration
-	document.body.addEventListener('mousemove', calibrate);
-
-	// If using the mouse to simulate gazes, need to listen for mouse moves
-	if(mouseInput) {
-		document.body.addEventListener('mousemove', function(event) {
-			imposterGazeEvent(event.clientX, event.clientY);
-		});
-	}
-
-	if(tracked) {
-		// If the page is no longer visible, end the last gaze event
-		document.addEventListener('visibilitychange', function(event) {
-			if(document.hidden) {
-				handleGazeEvent(null, null, null);
+	switch(key) {
+		case 'div.file': // Github file (inc diffs)
+			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
+		case 'li.commit': // Github commit
+			var data = elem.attr('data-channel');
+			var split = data.split(':');
+			var commitID = split[split.length - 1];
+			var name = $(elem).find('p.commit-title > a').attr('title');
+			return 'Commit: id - ' + commitID + ', name - ' + name;
+		case 'li.js-issue-row': // Github issue in list
+			var title = $(elem).find('div > div > a.h4').text().trim();
+			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
+			var numberStr = spanContent.trim().split('\n')[0];
+			return 'Issue/Pull request: ' + numberStr + ', ' + title;
+		case 'div.g': // Google search result
+			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
+			if(link == '') {
+				return 'Google result special element';				
 			}
-		});		
-	} else {
-		// If the page is changing, end the page view
-		window.addEventListener('beforeunload', function(event){
-			chrome.runtime.sendMessage(pageViewObject());
-		})
-	}
-
-	// After 100ms of no mutations, attempt to add mouseenter/mouseleave listeners to targets
-	// This is needed because some page changes don't refresh the page, and new listeners may be needed
-	var observer = new MutationObserver(function(mutations) {
-		if(mouseListenerTimeout === null) { // First change in a while? Set the timer
-			mouseListenerTimeout = setTimeout(function(){
-				addMouseListeners();
-				mouseListenerTimeout = null;
-			}, MUTATION_TIMEOUT);
-		} else { // Timer running? Clear it and set a new one
-			clearTimeout(mouseListenerTimeout);
-			mouseListenerTimeout = setTimeout(function(){
-				addMouseListeners();
-				mouseListenerTimeout = null;
-			}, MUTATION_TIMEOUT);
-		}
-	});
-	var config = {
-		subtree: true,
-		attributes: true
-	};
-	observer.observe(document, config);
-}
-
-// Add mouseenter/mouseleave listeners to any present targets
-function addMouseListeners() {
-	for(var identifier in getCurrentTargets()) {
-		// Ugly hardcoding. Don't add listeners to every line of code
-		if(identifier === 'table.diff-table > tbody > tr' || identifier === 'div.udiff-line') {
-			continue;
-		}
-		var found = $(identifier);
-		for(var item of found) {
-			item.addEventListener('mouseenter', genericEventHandler);
-			item.addEventListener('mouseleave', genericEventHandler);
-		}
-	}
-	// In place of lines of code, attempt to add listeners to file containers
-	var files = $('div.file');
-	for(var item of files) {
-		item.addEventListener('mouseenter', githubFileMouseEventHandler);
-		item.addEventListener('mouseleave', githubFileMouseEventHandler);
-	}
-	var files = $('div.diff-container');
-	for(var item of files) {
-		item.addEventListener('mouseenter', bitbucketFileMouseEventHandler);
-		item.addEventListener('mouseleave', bitbucketFileMouseEventHandler);
-	}
-
-}
-
-/*************************
-Event Monitoring Functions
-*************************/
-
-// Handles any 'addEventListener' style events
-function genericEventHandler(event) {
-	for(var identifier in getCurrentTargets()) {
-		var found = $(event.target).closest(identifier);
-		if(found.length) {
-			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found))
-			chrome.runtime.sendMessage(obj);
-			break;
-		}
+			return 'Google result: ' + link;
+		case 'a.diff-expander':
+			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
+		case 'table.diff-table > tbody > tr': // Github Diff code line
+			if(elem.hasClass('js-expandable-line')) {
+				return expandbleLineDetail('Expandable line details', elem);
+			} else if(elem[0].hasAttribute('data-position')) {
+				return "File start/end marker";
+			}
+			return githubLineDetails(elem);
+		default: // Used assigned label mapping in 'targets' global
+			return getCurrentTargets()[key];
 	}
 }
-
-// Handles the mouseenter/leave events for files since they aren't in the normal list
-function githubFileMouseEventHandler(event, target) {
-	var obj = eventInteractionObject(event.type, getTargetDescription('div.file', event.target));
-	chrome.runtime.sendMessage(obj);
-}
-
-// Handles the mouseenter/leave events for files since they aren't in the normal list
-function bitbucketFileMouseEventHandler(event, target) {
-	var obj = eventInteractionObject(event.type, getTargetDescription('div.diff-container', event.target));
-	chrome.runtime.sendMessage(obj);
-}
-
-// Object creating funciton just for cleanliness
-function eventInteractionObject(type, target) {
-	var obj = {
-		'comType': 'event',
-		'type': type
-	};
-	if(typeof target !== 'string') {
-		for(var key in target) {
-			obj[key] = target[key];
-		}
-	} else {
-		obj['target'] = target;
-	}
-	// These all could be set at declaration but it would change the key order, useful when looking at data manually
-	obj['timestamp'] = Date.now();
-	obj['domain'] = window.location.hostname;
-	obj['pageHref'] = window.location.href;
-	obj['pageType'] = labelPageType();
-	return obj;
-}
-
-/************************
-Gaze Monitoring Functions
-************************/
-
-function handleNewGaze(x, y) {
-	var viewed = document.elementFromPoint(x, y);
-	var targettedIdentifier = null;
-	var targettedElement = null;
-	// Check each target key to see if currently viewed element is a child of it
-	for(var identifier in getCurrentTargets()) {
-		var found = $(viewed).closest(identifier);
-		if(found.length) {
-			targettedIdentifier = identifier;
-			targettedElement = found;
-			break;
-		}
-	}
-
-	checkForTargetChange(targettedIdentifier, targettedElement);
-}
-
-// Checks if viewed pixel is a new element of interest (file/code, comments, etc), logs if it is
-function checkForTargetChange(targettedIdentifier, targettedElement) {
-	try {
-		if(lastTarget && targettedElement) { // Past and current element are both targets
-			if(!(lastTarget.is(targettedElement))) {
-				handleGazeEvent(targettedElement, targettedIdentifier, null);
-			} 
-		} else if (lastTarget || targettedElement) { // Only one is/was is a target, definitely changed
-			handleGazeEvent(targettedElement, targettedIdentifier, null);
-		}
-	} catch (e) {
-		console.log('Something went wrong parsing ' + targettedIdentifier + ':');
-		console.log(targettedElement);
-		console.log(e.message);
-		// If somehthing goes wrong, set last gaze to null so it never gets stuck on a bad element
-		lastTarget = null;
-		lastIdentifier = null;
-	}
-};
 
 // Get the specifics of a line of code (line numbers, code text)
 function githubLineDetails(elem) {
@@ -517,24 +521,7 @@ function githubLineDetails(elem) {
 	};
 }
 
-function codeLengthNoWhitespace(code) {
-	if(code) {
-		var chars = code.replace(/\s/g,"");
-		return chars.length;
-	}
-	return 0;
-}
-
-function indentationValue(code) {
-	var depth = 0;
-	var i = 0;
-	while(i < code.length && code[i] === code[0]) {
-		depth++;
-		i++
-	}
-	return depth;
-}
-
+// Details in the expandable separator lines in a diff
 function expandbleLineDetail(source, elem) {
 	console.log(elem);
 	var obj = {
@@ -550,6 +537,208 @@ function expandbleLineDetail(source, elem) {
 	obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
 	obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
 	return obj;
+}
+
+/****************
+Object Generators
+****************/
+
+// For events fired by event listeners
+function eventInteractionObject(type, target) {
+	var obj = {
+		'comType': 'event',
+		'type': type
+	};
+	// If just a string, set that as the target. If object, incorporate all properties (inc. target)
+	if(typeof target !== 'string') {
+		for(var key in target) {
+			obj[key] = target[key];
+		}
+	} else {
+		obj['target'] = target;
+	}
+	// These all could be set at declaration but it would change the key order, useful when looking at data manually
+	obj['timestamp'] = Date.now();
+	obj['domain'] = window.location.hostname;
+	obj['pageHref'] = window.location.href;
+	obj['pageType'] = labelPageType();
+	return obj;
+}
+
+// For gazes on a target
+function gazeInteractionObject(target, start, end) {
+	var obj = {
+		'comType': 'event',
+		'type': 'gaze'
+	};
+	// If just a string, set that as the target. If object, incorporate all properties (inc. target)
+	if(typeof target !== 'string') {
+		for(var key in target) {
+			obj[key] = target[key];
+		}
+	} else {
+		obj['target'] = target;
+	}
+	// These all could be set at initial declaration but it would change the key order,
+	// keeping the order is useful when looking at data manually
+	obj['timestamp'] = start;
+	obj['timestampEnd'] = end;
+	obj['duration'] = end - start;
+	obj['domain'] = window.location.hostname;
+	obj['pageHref'] = window.location.href;
+	obj['pageType'] = labelPageType();
+	return obj;
+}
+
+// For gazes on an untracked (no specified target elements) page
+function pageViewObject() {
+	return {
+		'comType': 'event',
+		'type': 'pageView',
+		'timestamp': gazeStart,
+		'timestampEnd': lastGaze,
+		'duration': lastGaze - gazeStart,
+		'domain': window.location.hostname
+	}
+}
+
+// Substitute for data being sent from eyetracker, sends cursor position to server
+function imposterGazeEvent(xPos, yPos) {
+	var obj = {
+		'comType': 'gaze',
+		'x': xPos,
+		'y': yPos,
+		'timestamp': Date.now()
+	};
+	chrome.runtime.sendMessage(obj);
+}
+
+/***************
+Helper Functions
+***************/
+
+function labelPageType() {
+	for(var key in pageTypeRegex) {
+		if(pageTypeRegex[key].test(window.location.href)) {
+			return key;
+		}
+	}
+	return 'Unlabeled page';
+}
+// Returns the object of target elements possible on the current domain
+function getCurrentTargets() {
+	return allTargets[getCurrentTrackedDomain()];
+}
+
+// Gets the current domain (e.g. github, not www.github.com), returns null if not a tracked page
+function getCurrentTrackedDomain() {
+	for(var domain in allTargets) {
+		if(window.location.hostname.includes(domain)) {
+			return domain;
+		}
+	}
+	return null;
+}
+
+// Is this page one that we have target elements for
+function isTracked() {
+	if(getCurrentTrackedDomain() !== null) {
+		return true;
+	}
+	return false;
+}
+
+// Returns number of nonwhitespace characters in a string
+function codeLengthNoWhitespace(code) {
+	if(code) {
+		var chars = code.replace(/\s/g,"");
+		return chars.length;
+	}
+	return 0;
+}
+
+// Number of indentation elements (space or tab) at the start of a line
+// 'code' is assumed to have indentation elements, or this method wouldn't have been called
+function indentationValue(code) {
+	var depth = 0;
+	var i = 0;
+	while(i < code.length && code[i] === code[0]) {
+		depth++;
+		i++
+	}
+	return depth;
+}
+
+// Finds the median. Not sure why Math doesn't have this
+function median(arr) {
+	arr.sort(function(a,b){return a-b;});
+	if(arr.length === 0) {
+		return 0;
+	}
+	var mid = Math.floor(arr.length/2);
+	if(arr.length % 2) { // Odd
+		return arr[mid]
+	} else {
+		return (arr[mid - 1] + arr[mid]) / 2;
+	}
+}
+
+
+
+
+
+/** Old bitbucket code, probably never going to be used
+
+var bitbucketTargets = {
+	'div.fbnKxr': 'Navigation menu',
+	// Overview
+	'div#repo-metadata': 'Main repo information',
+	'div#repo-stats': 'Main repo information',
+	'div.readme': 'README',
+	'div#repo-activity': 'Repo activity',
+	// Source
+	'div#inline-dialog-branch-dialog': 'Branch list',
+	'table#source-list': 'File browser', // File/folder
+	'article.readme': 'README',
+	// Commits
+	'table.commit-list > tbody > tr': 'Special case, won\'t see this', // Commit
+	'div.udiff-line': 'Special case, won\'t see this', // Code
+	'div.ellipsis': 'Hidden code expansion button',
+	// Branches
+	'table.branches-list > tbody > tr.iterable-item': 'Special case, won\'t see this', // Branch
+	// Pull requests
+	'div#pull-requests-filter-bar': 'Pull request filters',
+	'tr.pull-request-row': 'Special case, won\'t see this', // Pull request
+	// Specific pull request
+	'div.compare-widget-container': 'Pull request branch details',
+	'div#pullrequest-actions': 'Pull request actions',
+	'header#pull-request-diff-header': 'Pull request information',
+	// Issues
+	'div.filter-container': 'Issue filters',
+	'div.issues-toolbar-right': 'Issue filters',
+	'table.issues-list > tbody > tr': 'Special case, won\'t see this', // Issue
+	// Specific issue
+	'div#issue-main-content': 'Issue content',
+	'li.comment': 'Comment',
+	'li.new-comment': 'New comment field',
+	'div.issue-attrs': 'Issue details',
+}
+
+From var allTargets:
+	'bitbucket': bitbucketTargets
+
+From addMouseHandlers (bottom):
+
+	var files = $('div.diff-container');
+	for(var item of files) {
+		item.addEventListener('mouseenter', bitbucketFileMouseEventHandler);
+		item.addEventListener('mouseleave', bitbucketFileMouseEventHandler);
+	}
+
+// Handles the mouseenter/leave events for files since they aren't in the normal list
+function bitbucketFileMouseEventHandler(event, target) {
+	var obj = eventInteractionObject(event.type, getTargetDescription('div.diff-container', event.target));
+	chrome.runtime.sendMessage(obj);
 }
 
 // Get the specifics of a line of code (line numbers, code text)
@@ -582,135 +771,7 @@ function bitbucketLineDetails(elem) {
 	};
 }
 
-// For gazes on a target
-function gazeInteractionObject(target, start, end) {
-	var obj = {
-		'comType': 'event',
-		'type': 'gaze'
-	};
-	if(typeof target !== 'string') {
-		for(var key in target) {
-			obj[key] = target[key];
-		}
-	} else {
-		obj['target'] = target;
-	}
-	// These all could be set at declaration but it would change the key order, useful when looking at data manually
-	obj['timestamp'] = start;
-	obj['timestampEnd'] = end;
-	obj['duration'] = end - start;
-	obj['domain'] = window.location.hostname;
-	obj['pageHref'] = window.location.href;
-	obj['pageType'] = labelPageType();
-	return obj;
-}
-
-// For gazes on an untracked (no specified target elements) page
-function pageViewObject() {
-	return {
-		'comType': 'event',
-		'type': 'pageView',
-		'timestamp': gazeStart,
-		'timestampEnd': lastGaze,
-		'duration': lastGaze - gazeStart,
-		'domain': window.location.hostname
-	}
-}
-
-// Gaze has changed, report the completed gaze to background.js, set new gaze data
-// If end is null, uses the current time
-function handleGazeEvent(newElement, newIdentifier, end) {
-	var gazeEnd;
-	if(end) {
-		gazeEnd = end;
-	} else {
-		gazeEnd = Date.now();
-	}
-	if(lastIdentifier && lastTarget) {
-		var descrption = getTargetDescription(lastIdentifier, lastTarget);
-		var obj = gazeInteractionObject(descrption, gazeStart, gazeEnd);
-		chrome.runtime.sendMessage(obj);
-	}
-	lastTarget = newElement;
-	lastIdentifier = newIdentifier;
-	gazeStart = gazeEnd;
-}
-
-// If gazeLoss is recieved from background.js handle it appropriately
-function handleGazeLoss(timestamp) {
-	if(isTracked()) {
-		handleGazeEvent(null, null, timestamp);
-	} else {
-		chrome.runtime.sendMessage(pageViewObject());
-		clearInterval(pageViewInterval);
-		pageViewInterval = null;
-	}
-	var obj = {
-		'comType': 'event',
-		'type': 'gazeLoss',
-		'timestamp': timestamp
-	}
-	chrome.runtime.sendMessage(obj);
-}
-
-// Substitute for data being sent from eyetracker, sends cursor position to server
-function imposterGazeEvent(xPos, yPos) {
-	var obj = {
-		'comType': 'gaze',
-		'x': xPos,
-		'y': yPos,
-		'timestamp': Date.now()
-	};
-	chrome.runtime.sendMessage(obj);
-}
-
-/**************
-Other Functions
-**************/
-
-function labelPageType() {
-	for(var key in pageTypeRegex) {
-		if(pageTypeRegex[key].test(window.location.href)) {
-			return key;
-		}
-	}
-	return 'Unlabeled page';
-}
-
-// How to lable the target. Null is untracked, some elements have single lable, some have variable labels
-function getTargetDescription(key, elem) {
-	if(key == null) {
-		return 'Untracked';
-	}
-	switch(key) {
-		case 'div.file': // Github file (inc diffs)
-			return 'File: ' + $(elem).find('div.file-header > div.file-info > a').attr('title');
-		case 'li.commit': // Github commit
-			var data = elem.attr('data-channel');
-			var split = data.split(':');
-			var commitID = split[split.length - 1];
-			var name = $(elem).find('p.commit-title > a').attr('title');
-			return 'Commit: id - ' + commitID + ', name - ' + name;
-		case 'li.js-issue-row': // Github issue in list
-			var title = $(elem).find('div > div > a.h4').text().trim();
-			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
-			var numberStr = spanContent.trim().split('\n')[0];
-			return 'Issue/Pull request: ' + numberStr + ', ' + title;
-		case 'div.g': // Google search result
-			var link = $(elem).find('div > div.rc > h3.r > a').text().trim();
-			if(link == '') {
-				return 'Google result special element';				
-			}
-			return 'Google result: ' + link;
-		case 'a.diff-expander':
-			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
-		case 'table.diff-table > tbody > tr': // Github Diff code line
-			if(elem.hasClass('js-expandable-line')) {
-				return expandbleLineDetail('Expandable line details', elem);
-			} else if(elem[0].hasAttribute('data-position')) {
-				return "File start/end marker";
-			}
-			return githubLineDetails(elem);
+From getTargetDescription:
 		case 'div.diff-container': // Bitbucket diff file
 			var header = $(elem).find('div.heading > div.primary > h1.filename');
 			header = $(header).contents().filter(function() { // Ignore <span>s
@@ -730,30 +791,11 @@ function getTargetDescription(key, elem) {
 			return 'Pull request: ' + $(elem).find('td.title > div > a').text().trim();
 		case 'table.issues-list > tbody > tr': // Bitpucket issue
 			return 'Issue: ' + $(elem).find('td.text > div > div > a').text().trim();
-		default: // Used assigned label mapping in 'targets' global
-			return getCurrentTargets()[key];
-	}
-}
 
-// Returns the object of target elements possible on the current domain
-function getCurrentTargets() {
-	return allTargets[getCurrentTrackedDomain()];
-}
-
-// Gets the current domain (e.g. github, not www.github.com), returns null if not a tracked page
-function getCurrentTrackedDomain() {
-	for(var domain in allTargets) {
-		if(window.location.hostname.includes(domain)) {
-			return domain;
-		}
-	}
-	return null;
-}
-
-// Is this page one that we have target elements for
-function isTracked() {
-	if(getCurrentTrackedDomain() !== null) {
-		return true;
-	}
-	return false;
-}
+*/
+/** Old github targets
+	'div.header': 'Main github header',
+	'div.repohead': 'Repo header',
+	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
+	'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)'
+*/
