@@ -232,18 +232,19 @@ function privacyFilter(obj) {
 				}
 				break;
 			case 'metadata':
-				if(obj.hasOwnProperty('target') && obj['target'] === 'code') {
+				if(obj.hasOwnProperty('codeText')) {
 					delete obj['codeText'];
 				}
 				break;
 			case 'symbols':
-				if(obj.hasOwnProperty('target') && obj['target'] === 'code') {
+				if(obj.hasOwnProperty('codeText')) {
 					obj['codeText'] = symbolsOnly(obj['codeText']);
 				}
 				break;
 			case 'keywords':
-				if(obj.hasOwnProperty('target') && obj['target'] === 'code') {
-					// Do a thing
+				if(obj.hasOwnProperty('codeText')) {
+					//Temp
+					obj['codeText'] = symbolsOnly(obj['codeText']);
 				}
 				break;
 		}

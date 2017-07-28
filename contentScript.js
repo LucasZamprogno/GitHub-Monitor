@@ -6,6 +6,7 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	//'div.header': 'Main github header',
 	//'div.repohead': 'Repo header',
 	//'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
+	'a.diff-expander': 'Special case, won\'t see this', // Diff separator expansion button
 	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Code
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
@@ -388,8 +389,9 @@ function genericEventHandler(event) {
 	for(var identifier in getCurrentTargets()) {
 		var found = $(event.target).closest(identifier);
 		if(found.length) {
-			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found));
+			var obj = eventInteractionObject(event.type, getTargetDescription(identifier, found))
 			chrome.runtime.sendMessage(obj);
+			break;
 		}
 	}
 }
@@ -408,15 +410,23 @@ function bitbucketFileMouseEventHandler(event, target) {
 
 // Object creating funciton just for cleanliness
 function eventInteractionObject(type, target) {
-	return {
+	var obj = {
 		'comType': 'event',
-		'type': type,
-		'target': target,
-		'timestamp': Date.now(),
-		'domain': window.location.hostname,
-		'pageHref': window.location.href,
-		'pageType': labelPageType()
+		'type': type
 	};
+	if(typeof target !== 'string') {
+		for(var key in target) {
+			obj[key] = target[key];
+		}
+	} else {
+		obj['target'] = target;
+	}
+	// These all could be set at declaration but it would change the key order, useful when looking at data manually
+	obj['timestamp'] = Date.now();
+	obj['domain'] = window.location.hostname;
+	obj['pageHref'] = window.location.href;
+	obj['pageType'] = labelPageType();
+	return obj;
 }
 
 /************************
@@ -431,11 +441,6 @@ function handleNewGaze(x, y) {
 	for(var identifier in getCurrentTargets()) {
 		var found = $(viewed).closest(identifier);
 		if(found.length) {
-			// Ugly hardcoding
-			if(found[0].nodeName == 'TR' && found[0].hasAttribute('data-position')) {
-				// Ignore the code breaks in a diff
-				break;
-			}
 			targettedIdentifier = identifier;
 			targettedElement = found;
 			break;
@@ -500,6 +505,7 @@ function githubLineDetails(elem) {
 		codeText = codeText.trim();
 	}
 	return {
+		'target': 'code',
 		'file': file,
 		'change': type,
 		'oldLineNum': oldLineNum,
@@ -527,6 +533,23 @@ function indentationValue(code) {
 		i++
 	}
 	return depth;
+}
+
+function expandbleLineDetail(source, elem) {
+	console.log(elem);
+	var obj = {
+		'target': source
+	};
+	var text = elem.text().trim()
+	var lineRegex = new RegExp('\\d+,\\d+', 'g');
+	var lines = lineRegex.exec(text)[0].split(',');
+	obj['oldStart'] = parseInt(lines[0]);
+	obj['oldEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
+	lines = lineRegex.exec(text)[0].split(',');
+	obj['newStart'] = parseInt(lines[0]);
+	obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
+	obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
+	return obj;
 }
 
 // Get the specifics of a line of code (line numbers, code text)
@@ -562,11 +585,10 @@ function bitbucketLineDetails(elem) {
 // For gazes on a target
 function gazeInteractionObject(target, start, end) {
 	var obj = {
-		'comType': 'event'
+		'comType': 'event',
+		'type': 'gaze'
 	};
-	obj['type'] = 'gaze';
 	if(typeof target !== 'string') {
-		obj['target'] = 'code';
 		for(var key in target) {
 			obj[key] = target[key];
 		}
@@ -680,7 +702,14 @@ function getTargetDescription(key, elem) {
 				return 'Google result special element';				
 			}
 			return 'Google result: ' + link;
+		case 'a.diff-expander':
+			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
 		case 'table.diff-table > tbody > tr': // Github Diff code line
+			if(elem.hasClass('js-expandable-line')) {
+				return expandbleLineDetail('Expandable line details', elem);
+			} else if(elem[0].hasAttribute('data-position')) {
+				return "File start/end marker";
+			}
 			return githubLineDetails(elem);
 		case 'div.diff-container': // Bitbucket diff file
 			var header = $(elem).find('div.heading > div.primary > h1.filename');
