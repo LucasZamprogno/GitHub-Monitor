@@ -3,7 +3,7 @@ var WEBSOCKET_PORT = 2366; // Tobii app websocket port
 var GAZE_LOSS_TIMEOUT = 500; // How much time can pass before deciding the user has looked/moved away
 var GAZE_LOSS_WAIT = 100; // How often to check if the user has looked/moved away
 var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app websocket server
-var PRIVCAY_DEFAULTS = ['everything']; // Privacy settings to be selected upon first install
+var PRIVCAY_DEFAULTS = ['url', 'file', 'everything']; // Privacy settings to be selected upon first install
 
 // Note: All values stored in localStorage are always stored as strings. May be converted implicitly.
 
