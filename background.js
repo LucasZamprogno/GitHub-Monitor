@@ -3,7 +3,7 @@ var WEBSOCKET_PORT = 2366; // Tobii app websocket port
 var GAZE_LOSS_TIMEOUT = 500; // How much time can pass before deciding the user has looked/moved away
 var GAZE_LOSS_WAIT = 100; // How often to check if the user has looked/moved away
 var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app websocket server
-var PRIVCAY_DEFAULTS = ['url', 'file', 'everything']; // Privacy settings to be selected upon first install
+var PRIVCAY_DEFAULTS = ['issues', 'url', 'file', 'symbols']; // Privacy settings to be selected upon first install
 
 // Note: All values stored in localStorage are always stored as strings. May be converted implicitly.
 
@@ -213,8 +213,12 @@ and a unique ID, then add a case here that matches that id.
 function privacyFilter(obj) {
 	for(var filter of privacyFilters) {
 		switch(filter) {
+			case 'issues':
+				if(obj['target'].includes('Issue/Pull request: ')) {
+					obj['target'] = 'Issue/Pull request';
+				}
 			case 'google':
-				if(obj['pageHref'] && obj['pageHref'].includes('www.google.') && obj['target'].includes('Google result:')) {
+				if(obj['target'].includes('Google result:')) {
 					obj['target'] = 'Google result';
 				}
 				break;
