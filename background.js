@@ -21,6 +21,8 @@ var gazeLossInterval = null;
 var badgeUpdates = setInterval(function() { setBadge() }, 250);
 var lastCommunication = null;
 var savedDiffs = [];
+var lastHref = null;
+var lastType = null;
 
 if(reporting) {
 	startReporting();
@@ -35,12 +37,8 @@ function messageListener(request, sender, sendResponse) {
 	if(sender.hasOwnProperty('tab')) { 
 		switch(request['comType']) {
 			case 'event': // Event of any sort to be saved in the dataset
-				if(request['type'] === 'gaze' && request['target'] === 'code' && isFromNewDiff(request)) {
-					var diff = {'pageHref': request['pageHref'], 'file': request['file']};
-					savedDiffs.push(diff);
-					diff['comType'] = 'diff';
-					chrome.tabs.sendMessage(sender['tab'].id, diff);
-				}
+				getDiffIfNeeded(request);
+				pageChangeIfNeeded(request)''
 				delete request['comType'];
 				sendDataToSource(request);
 				break;
@@ -56,6 +54,33 @@ function messageListener(request, sender, sendResponse) {
 				sendDataToSource(request);
 				break;
 		}
+	}
+}
+
+function getDiffIfNeeded(obj) {
+	if(obj['type'] === 'gaze' && obj['target'] === 'code' && isFromNewDiff(obj)) {
+		var diff = {'pageHref': obj['pageHref'], 'file': obj['file']};
+		savedDiffs.push(diff);
+		diff['comType'] = 'diff';
+		chrome.tabs.sendMessage(sender['tab'].id, diff);
+	}
+}
+
+function pageChangeIfNeeded(obj) {
+	if(obj.hasOwnProperty('pageHref') && lastHref !== obj['pageHref']) {
+		if(lastHref !== null) {
+			var out = {
+				'type': 'pageChange',
+				'oldHref': lastHref,
+				'newHref': obj['pageHref'],
+				'oldType': lastType,
+				'newType': obj['pageType'],
+				'timestamp': obj['timestamp']
+			};
+			sendDataToSource(pageChangeObject(out))
+		}
+		lastHref = obj['pageHref'];
+		lastType = obj['pageType'];
 	}
 }
 
