@@ -102,6 +102,10 @@ function messageListener(request, sender, sendResponse) {
 				x = Math.round((x - totalXOffset)/zoom);
 				y = Math.round((y - totalYOffset)/zoom);
 			}
+			var inX = x > window.screenX && x < window.screenX + window.outerWidth;
+			var inY = y > window.screenY && y < window.screenY + window.outerHeight;
+			var inW = inX && inY;
+			sendResponse({'inWindow': inW});
 			if(tracked) {
 				if(calibrated) {
 					handleNewGaze(x, y);

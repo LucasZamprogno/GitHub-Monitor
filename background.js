@@ -3,6 +3,7 @@ var WEBSOCKET_PORT = 2366; // Tobii app websocket port
 var GAZE_LOSS_TIMEOUT = 500; // How much time can pass before deciding the user has looked/moved away
 var GAZE_LOSS_WAIT = 100; // How often to check if the user has looked/moved away
 var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app websocket server
+var WINDOW_TIMEOUT = 500; // How long user must be looking out of chrome before it registers as an event
 var PRIVCAY_DEFAULTS = ['issues', 'url', 'file', 'symbols']; // Privacy settings to be selected upon first install
 
 // Note: All values stored in localStorage are always stored as strings. May be converted implicitly.
@@ -23,6 +24,7 @@ var lastCommunication = null;
 var savedDiffs = [];
 var lastHref = null;
 var lastType = null;
+var lastWindowGaze = null;
 
 if(reporting) {
 	startReporting();
@@ -38,7 +40,7 @@ function messageListener(request, sender, sendResponse) {
 		switch(request['comType']) {
 			case 'event': // Event of any sort to be saved in the dataset
 				getDiffIfNeeded(request);
-				pageChangeIfNeeded(request)''
+				pageChangeIfNeeded(request);
 				delete request['comType'];
 				sendDataToSource(request);
 				break;
@@ -67,6 +69,7 @@ function getDiffIfNeeded(obj) {
 }
 
 function pageChangeIfNeeded(obj) {
+	console.log('getting here');
 	if(obj.hasOwnProperty('pageHref') && lastHref !== obj['pageHref']) {
 		if(lastHref !== null) {
 			var out = {
@@ -77,7 +80,7 @@ function pageChangeIfNeeded(obj) {
 				'newType': obj['pageType'],
 				'timestamp': obj['timestamp']
 			};
-			sendDataToSource(pageChangeObject(out))
+			sendDataToSource(out);
 		}
 		lastHref = obj['pageHref'];
 		lastType = obj['pageType'];
@@ -198,8 +201,28 @@ function sendCoordToActiveTabs(x, y) {
 // If this isn't wrapped in a function it fails when done quickly in succession
 function getZoomAndSend(id, x, y) {
 	chrome.tabs.getZoom(id, function(zoomFactor){
-		chrome.tabs.sendMessage(id, {'comType': 'coord', 'x': x, 'y': y, 'zoom': zoomFactor});
+		var obj = {'comType': 'coord', 'x': x, 'y': y, 'zoom': zoomFactor};
+		chrome.tabs.sendMessage(id, obj, checkWindowGaze);
 	});
+}
+
+// Helper method for getZoomAndSend to handle message responses
+function checkWindowGaze(response) {
+	if(response && response['inWindow']) {
+		var now = Date.now();
+		if(lastWindowGaze !== null && (now - lastWindowGaze) > WINDOW_TIMEOUT) {
+			var obj = {
+				'type': 'gaze',
+				'target': 'Out of Chrome window',
+				'timestamp': lastWindowGaze,
+				'timestampEnd': now,
+				'pageHref': 'None',
+				'pageType': 'None'
+			}
+			sendDataToSource(obj);
+		}
+		lastWindowGaze = now;
+	}
 }
 
 // Add on session ID and send event to the server
@@ -239,22 +262,28 @@ function privacyFilter(obj) {
 	for(var filter of privacyFilters) {
 		switch(filter) {
 			case 'issues':
-				if(obj['target'].includes('Issue/Pull request: ')) {
+				if(obj.hasOwnProperty('target') && obj['target'].includes('Issue/Pull request: ')) {
 					obj['target'] = 'Issue/Pull request';
 				}
 			case 'google':
-				if(obj['target'].includes('Google result:')) {
+				if(obj.hasOwnProperty('target') && obj['target'].includes('Google result:')) {
 					obj['target'] = 'Google result';
 				}
 				break;
 			case 'domains':
-				if(obj['type'] == 'pageView') {
+				if(obj.hasOwnProperty('type') && obj['type'] == 'pageView') {
 					obj['domain'] = 'Redacted';
 				}
 				break;
 			case 'url':
 				if(obj.hasOwnProperty('pageHref')) {
 					obj['pageHref'] = stringHash(obj['pageHref']).toString();
+				}
+				if(obj.hasOwnProperty('newHref')) {
+					obj['newHref'] = stringHash(obj['newHref']).toString();
+				}
+				if(obj.hasOwnProperty('oldHref')) {
+					obj['oldHref'] = stringHash(obj['oldHref']).toString();
 				}
 				break;
 			case 'file':
