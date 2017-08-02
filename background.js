@@ -180,7 +180,6 @@ function updatePrivacySettings(arrStr) {
 function updateSaveLocation(str) {
 	saveLocation = str;
 	setLocal('saveLocation', str);
-	console.log(saveLocation);
 }
 
 // Has there been no gaze data reported from the tracker for a given amount of time
@@ -247,10 +246,8 @@ function sendDataToSave(data) {
 			data['id'] = sessionId;
 			data = JSON.stringify(data); // Weak typiiiiiing
 			if(saveLocation === 'local') {
-				console.log('a');
 				ws.send(data);
 			} else if(saveLocation === 'remote') {
-				console.log('b');
 				var xmlhttp = new XMLHttpRequest();
 				xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
 				xmlhttp.setRequestHeader('Content-Type', 'application/json');

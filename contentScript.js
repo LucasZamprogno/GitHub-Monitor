@@ -157,7 +157,6 @@ function calibrate(event) {
 	if(lastZoom) { // Needed for calibration
 		totalXOffset = event.screenX - (event.clientX * lastZoom);
 		totalYOffset = event.screenY - (event.clientY * lastZoom);
-		console.log('Calibrated, totalXOffset = ' + totalXOffset + ', totalYOffset = ' + totalYOffset);
 		recalibrationInterval = setInterval(function() { recalibrate() }, RECALIBRATION_TIME);
 		// Remove this listener
 		document.body.removeEventListener('mousemove', calibrate);
