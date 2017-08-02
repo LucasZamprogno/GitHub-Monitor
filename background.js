@@ -12,10 +12,12 @@ var PRIVCAY_DEFAULTS = ['issues', 'url', 'file', 'symbols']; // Privacy settings
 (typeof localStorage['sessionId'] === 'undefined') && setLocal('sessionId', null);
 (typeof localStorage['reporting'] === 'undefined') && setLocal('reporting', false);
 (typeof localStorage['privacyFilters'] === 'undefined') && setLocal('privacyFilters', JSON.stringify(PRIVCAY_DEFAULTS));
+(typeof localStorage['saveLocation'] === 'undefined') && setLocal('saveLocation', 'local');
 
 var reporting = getLocal('reporting');
 var sessionId = getLocal('sessionId');
 var privacyFilters = getLocal('privacyFilters');
+var saveLocation = getLocal('saveLocation');
 var ws;
 var attemptConnectionInterval = setInterval(function(){ connectToTracker() }, CONNECTION_WAIT);
 var gazeLossInterval = null;
@@ -42,7 +44,7 @@ function messageListener(request, sender, sendResponse) {
 				getDiffIfNeeded(request, sender);
 				pageChangeIfNeeded(request);
 				delete request['comType'];
-				sendDataToSource(request);
+				sendDataToSave(request);
 				break;
 			case 'gaze': // Fake gaze data from cursor
 				registerCommunication();
@@ -53,7 +55,7 @@ function messageListener(request, sender, sendResponse) {
 				break;
 			case 'diff': // Diff metadata to be saved in the dataset
 				delete request['comType'];
-				sendDataToSource(request);
+				sendDataToSave(request);
 				break;
 		}
 	}
@@ -79,7 +81,7 @@ function pageChangeIfNeeded(obj) {
 				'newType': obj['pageType'],
 				'timestamp': obj['timestamp']
 			};
-			sendDataToSource(out);
+			sendDataToSave(out);
 		}
 		lastHref = obj['pageHref'];
 		lastType = obj['pageType'];
@@ -130,6 +132,8 @@ function getLocal(key) {
 			}
 		case 'privacyFilters':
 			return JSON.parse(val);
+		default:
+			return val;
 	}
 }
 
@@ -148,7 +152,7 @@ function startReporting() {
 			'detail': 'Reporting - Started',
 			'timestamp': Date.now()
 		}
-		sendDataToSource(obj);
+		sendDataToSave(obj);
 	} else {
 		stopReporting();
 	}
@@ -164,13 +168,19 @@ function stopReporting() {
 		'timestamp': Date.now(),
 		'override': true
 	}
-	sendDataToSource(obj);
+	sendDataToSave(obj);
 }
 
 // Takes a string of the details selected in the popup that will not be reported on
 function updatePrivacySettings(arrStr) {
 	privacyFilters = JSON.parse(arrStr);
 	setLocal('privacyFilters', arrStr);
+}
+
+function updateSaveLocation(str) {
+	saveLocation = str;
+	setLocal('saveLocation', str);
+	console.log(saveLocation);
 }
 
 // Has there been no gaze data reported from the tracker for a given amount of time
@@ -218,14 +228,14 @@ function checkWindowGaze(response) {
 				'pageHref': 'None',
 				'pageType': 'None'
 			}
-			sendDataToSource(obj);
+			sendDataToSave(obj);
 		}
 		lastWindowGaze = now;
 	}
 }
 
 // Add on session ID and send event to the server
-function sendDataToSource(data) {
+function sendDataToSave(data) {
 	if(ws && ws.readyState === WebSocket.OPEN && (reporting || data.hasOwnProperty('override'))) {
 		if(data['type'] === 'diff') {
 			for(var i in data['allLineDetails']) {
@@ -235,7 +245,17 @@ function sendDataToSource(data) {
 		data = privacyFilter(data);
 		if(data) { // Data will be null if it shouldn't be reported at all
 			data['id'] = sessionId;
-			ws.send(JSON.stringify(data));
+			data = JSON.stringify(data); // Weak typiiiiiing
+			if(saveLocation === 'local') {
+				console.log('a');
+				ws.send(data);
+			} else if(saveLocation === 'remote') {
+				console.log('b');
+				var xmlhttp = new XMLHttpRequest();
+				xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
+				xmlhttp.setRequestHeader('Content-Type', 'application/json');
+				xmlhttp.send(data);
+			}
 		}
 	}
 }

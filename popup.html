@@ -17,6 +17,7 @@
 			<ul>
 				<li><a href="#tab1">Main</a></li>
 				<li><a href="#tab2">Settings</a></li>
+				<li><a href="#tab3">Saving</a></li>
 			</ul>
 			<div id="tab1">
 				<p title="For the tracker to be considered connected,&#013;the app must be running and currently tracking your eyes.">
@@ -75,6 +76,18 @@
 					<input type="radio" class="privacy" name="code" value="all" id="everything">
 					<label for="all" title="The original unaltered line of code">
 						Everything
+					</label>
+				</form>
+			</div>
+			<div id="tab3">
+				<form>
+					<input type="radio" class="save" name="save" value="local" id="local" checked>
+					<label for="local" title="Save in eyetracker folder">
+						Local
+					</label><br>
+					<input type="radio" class="save" name="save" value="remote" id="remote">
+					<label for="remote" title="Save to remote node server">
+						Remote
 					</label>
 				</form>
 			</div>

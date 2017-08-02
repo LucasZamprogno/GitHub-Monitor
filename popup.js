@@ -34,6 +34,8 @@ $(document).ready(function() {
 		$('input#' + id).prop('checked', true);
 	}
 
+	$('input#' + bg.saveLocation).prop('checked', true);
+
 	// Click handlers
 	$('button#set-session').click(function(e) {
 		e.preventDefault();
@@ -84,6 +86,10 @@ $(document).ready(function() {
 			}
 		});
 		bg.updatePrivacySettings(JSON.stringify(checked));
+	})
+
+	$('input.save').click(function(e) {
+		bg.updateSaveLocation(e.currentTarget.id);
 	})
 })
 
