@@ -5,6 +5,7 @@ var RECALIBRATION_TIME = 1000;
 var githubTargets = { // Some pretty useless things are commented out in case we want them later
 	// General/shared
 	'a.diff-expander': 'Special case, won\'t see this', // Diff separator expansion button
+	'div.review-comment': 'Code review comment', // typically inline with other elements
 	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Code
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
@@ -21,7 +22,7 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	'div.new-issue-form > div.discussion-timeline': 'New issue form title and comment',
 	'div#partial-discussion-header': 'Issue/Pull request header',
 	'div.discussion-sidebar': 'Issue/Pull request sidebar',
-	'div.discussion-item': 'Pull request discussion item',
+	'div.discussion-item': 'Pull request discussion action item',
 	'div.pull-merging': 'Pull request merge status',
 	'div.pull-request-review-menu': 'Pull request change review menu'
 };
@@ -396,7 +397,8 @@ function extractMetadata(file) {
 	rows.each(function(index) {
 		var elem = $(this);
 		rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
-		if(!isCodeMarker(elem) && !isExpandableLine(elem)) {
+		try {
+			if(!isCodeMarker(elem) && !isExpandableLine(elem)) {
 			var line = githubLineDetails(elem);
 			lengths.push(line['length']);
 			indentations.push(line['indentValue']);
@@ -418,9 +420,13 @@ function extractMetadata(file) {
 					unchanged++;
 					break;
 			}
-		} else {
-			return true; // Skip the line
+			} else {
+				return true; // Skip the line
+			}
+		} catch (e) {
+			return true; // Skip
 		}
+		
 	});
 	var totalLines = additions + deletions + unchanged;
 	return {
@@ -476,6 +482,8 @@ function getTargetDescription(key, elem) {
 				return expandbleLineDetail('Expandable line details', elem);
 			} else if(isCodeMarker(elem)) {
 				return "File start/end marker";
+			} else if(isInlineComment(elem)) {
+				return "Inline diff comment";
 			}
 			return githubLineDetails(elem);
 		default: // Used assigned label mapping in 'targets' global
@@ -709,6 +717,10 @@ function isCodeMarker(elem) {
 // Expandable blue code markers
 function isExpandableLine(elem) {
 	return elem.hasClass('js-expandable-line');
+}
+
+function isInlineComment(elem) {
+	return elem.hasClass('inline-comments');
 }
 
 

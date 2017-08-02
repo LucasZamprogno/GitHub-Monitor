@@ -39,7 +39,7 @@ function messageListener(request, sender, sendResponse) {
 	if(sender.hasOwnProperty('tab')) { 
 		switch(request['comType']) {
 			case 'event': // Event of any sort to be saved in the dataset
-				getDiffIfNeeded(request);
+				getDiffIfNeeded(request, sender);
 				pageChangeIfNeeded(request);
 				delete request['comType'];
 				sendDataToSource(request);
@@ -59,7 +59,7 @@ function messageListener(request, sender, sendResponse) {
 	}
 }
 
-function getDiffIfNeeded(obj) {
+function getDiffIfNeeded(obj, sender) {
 	if(obj['type'] === 'gaze' && obj['target'] === 'code' && isFromNewDiff(obj)) {
 		var diff = {'pageHref': obj['pageHref'], 'file': obj['file']};
 		savedDiffs.push(diff);
@@ -69,7 +69,6 @@ function getDiffIfNeeded(obj) {
 }
 
 function pageChangeIfNeeded(obj) {
-	console.log('getting here');
 	if(obj.hasOwnProperty('pageHref') && lastHref !== obj['pageHref']) {
 		if(lastHref !== null) {
 			var out = {
