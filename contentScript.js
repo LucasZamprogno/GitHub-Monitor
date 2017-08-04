@@ -491,26 +491,27 @@ function getTargetDescription(key, elem) {
 }
 
 // Get the specifics of a line of code (line numbers, code text)
-function githubLineDetails(elem) {
+function githubLineDetails(elem, type) {
 	var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
-	var file = fileString.substring(6); // Cut out 'File: '
+	var file = fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
 	// Line nums will be null if not present (addition or deletion lines)
-	var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
-	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
-	var codeElem = $(elem).find('td.blob-code');
-	var codeText = codeElem.find('span.blob-code-inner').text();
-	var type;
+	var oldLineNum = $(elem).find('td.blob-num-deletion');
+	var newLineNum = $(elem).find('td.blob-num-addition');
 	var indentType = 'none'; // space, tab, or none
 	var indentValue = 0;
-	if(codeElem.hasClass('blob-code-context')) {
-		type = 'unchanged';
-	} else if(codeElem.hasClass('blob-code-addition')) {
-		type = 'addition';
-	} else if(codeElem.hasClass('blob-code-deletion')) {
-		type = 'deletion';
-	} else { // Hopefully shouldn't happen
-		type = 'unknown';
-		codeText = '';
+	switch(type) {
+		case 'addition':
+			codeText = $(elem).find('td.blob-code-addition > span.blob-code-inner').text();
+			break;
+		case 'deletion':
+			codeText = $(elem).find('td.blob-code-deletion > span.blob-code-inner').text();
+			break;
+		case 'unchanged':
+			codeText = $(elem).first('td.blob-code-context > span.blob-code-inner').text();
+			break;
+		default: // Hopefully never happens
+			codeText = '';
+			break;
 	}
 	if(codeText !== '') {
 		codeText = codeText.substring(1); // Remove +, -, or space
@@ -722,6 +723,15 @@ function isInlineComment(elem) {
 	return elem.hasClass('inline-comments');
 }
 
+function changeType(elem) {
+	if(elem.hasClass('blob-code-addition') || elem.hasClass('blob-num-addition')) {
+		return 'addition';
+	} else if(elem.hasClass('blob-code-deletion') || elem.hasClass('blob-num-deletion')) {
+		return 'deletion';
+	} else {
+		return 'unchanged';
+	}
+}
 
 
 
