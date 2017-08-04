@@ -537,6 +537,7 @@ function githubLineDetails(elem, type) {
 	var indentType = 'none'; // space, tab, or none
 	var indentValue = 0;
 	switch(type) {
+		// Return null if the specified type doesn't exist in this row
 		case 'addition':
 			var codeElem = $(elem).find('td.blob-code-addition > span.blob-code-inner');
 			if(codeElem.length < 1) {
@@ -560,8 +561,7 @@ function githubLineDetails(elem, type) {
 			codeText = codeElem.first().text();
 			break;
 		default: // Hopefully never happens
-			codeText = '';
-			break;
+			return null;
 	}
 	if(codeText !== '') {
 		codeText = codeText.substring(1); // Remove +, -, or space
