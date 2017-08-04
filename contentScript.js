@@ -1,4 +1,4 @@
-var mouseInput = false; // Using the mouse to fake gaze data?
+var mouseInput = true; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var RECALIBRATION_TIME = 1000;
@@ -6,7 +6,14 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	// General/shared
 	'a.diff-expander': 'Special case, won\'t see this', // Diff separator expansion button
 	'div.review-comment': 'Code review comment', // typically inline with other elements
-	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Code
+	// These elements are child of the tr element following them, they MUST come first
+	'td.blob-code-addition': 'Special case, won\'t see this', // Diff line code
+	'td.blob-num-addition': 'Special case, won\'t see this', // Diff line code
+	'td.blob-code-deletion': 'Special case, won\'t see this', // Diff line code
+	'td.blob-num-deletion': 'Special case, won\'t see this', // Diff line code
+	'td.blob-code-context': 'Special case, won\'t see this', // Diff line code
+	'td.blob-num-context': 'Special case, won\'t see this', // Diff line code
+	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Non-code diff lines
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
 	// Main repo page
@@ -263,8 +270,8 @@ function mouseListenerDebounce(mutations) {
 // Add mouseenter/mouseleave listeners to any present targets
 function addMouseListeners() {
 	for(var identifier in getCurrentTargets()) {
-		// Ugly hardcoding. Don't add listeners to every line of code. (github || bitbucket)
-		if(identifier === 'table.diff-table > tbody > tr' || identifier === 'div.udiff-line') {
+		// Ugly hardcoding. Don't add listeners to every code element
+		if(identifier === 'table.diff-table > tbody > tr' || identifier.includes('td.blob')) {
 			continue;
 		}
 		var found = $(identifier);
@@ -395,38 +402,58 @@ function extractMetadata(file) {
 	var indentType = 'none';
 	rows.each(function(index) {
 		var elem = $(this);
-		rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
+		var additionComponent;
+		var deletionComponent;
+		var unchangedComponent;
+		if(!isCodeLine(elem)) {
+			rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
+		} else {
+			additionComponent = githubLineDetails(elem, 'addition');
+			deletionComponent = githubLineDetails(elem, 'deletion');
+			unchangedComponent = githubLineDetails(elem, 'unchanged');
+			// In split diff, can be addition, deletion, both, or neither (unchanged)
+			// deletion must be pushed first to match unified diff
+			if(deletionComponent) {
+				rowData.push(deletionComponent);
+			}
+			if(additionComponent) {
+				rowData.push(additionComponent);				
+			}
+			if(unchangedComponent) {
+				rowData.push(unchangedComponent);
+			}
+		}
+	});
+	for(var row of rowData) {
 		try {
-			if(!isCodeMarker(elem) && !isExpandableLine(elem)) {
-			var line = githubLineDetails(elem);
-			lengths.push(line['length']);
-			indentations.push(line['indentValue']);
-			if(line['indentType'] !== 'none') {
-				if(indentType === 'none') {
-					indentType = line['indentType'];
-				} else if(line['indentType'] !== indentType) {
-					indentType = 'mixed';
+			if(row['target'] === 'code') {
+				lengths.push(row['length']);
+				indentations.push(row['indentValue']);
+				if(row['indentType'] !== 'none') {
+					if(indentType === 'none') {
+						indentType = row['indentType'];
+					} else if(row['indentType'] !== indentType) {
+						indentType = 'mixed';
+					}
 				}
-			}
-			switch(line['change']) {
-				case 'addition':
-					additions++;
-					break;
-				case 'deletion':
-					deletions++;
-					break;
-				case 'unchanged':
-					unchanged++;
-					break;
-			}
+				switch(row['change']) {
+					case 'addition':
+						additions++;
+						break;
+					case 'deletion':
+						deletions++;
+						break;
+					case 'unchanged':
+						unchanged++;
+						break;
+				}
 			} else {
-				return true; // Skip the line
+				continue;
 			}
 		} catch (e) {
-			return true; // Skip
+			continue;
 		}
-		
-	});
+	}
 	var totalLines = additions + deletions + unchanged;
 	return {
 		'totalLines': totalLines,
@@ -476,6 +503,15 @@ function getTargetDescription(key, elem) {
 			return 'Google result: ' + link;
 		case 'a.diff-expander':
 			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
+		case 'td.blob-code-addition':
+		case 'td.blob-num-addition':
+			return githubLineDetails(elem.closest('tr'), 'addition')
+		case 'td.blob-code-deletion':
+		case 'td.blob-num-deletion':
+			return githubLineDetails(elem.closest('tr'), 'deletion')
+		case 'td.blob-code-context':
+		case 'td.blob-num-context':
+			return githubLineDetails(elem.closest('tr'), 'unchanged')
 		case 'table.diff-table > tbody > tr': // Github Diff code line
 			if(isExpandableLine(elem)) {
 				return expandbleLineDetail('Expandable line details', elem);
@@ -484,30 +520,44 @@ function getTargetDescription(key, elem) {
 			} else if(isInlineComment(elem)) {
 				return "Inline diff comment";
 			}
-			return githubLineDetails(elem);
+			return 'Unknown github row type';
 		default: // Used assigned label mapping in 'targets' global
 			return getCurrentTargets()[key];
 	}
 }
 
 // Get the specifics of a line of code (line numbers, code text)
+// elem is a row, type is 'addition', 'deletion', or 'unchanged'
 function githubLineDetails(elem, type) {
 	var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
 	var file = fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
 	// Line nums will be null if not present (addition or deletion lines)
-	var oldLineNum = $(elem).find('td.blob-num-deletion');
-	var newLineNum = $(elem).find('td.blob-num-addition');
+	var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
+	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
 	var indentType = 'none'; // space, tab, or none
 	var indentValue = 0;
 	switch(type) {
 		case 'addition':
-			codeText = $(elem).find('td.blob-code-addition > span.blob-code-inner').text();
+			var codeElem = $(elem).find('td.blob-code-addition > span.blob-code-inner');
+			if(codeElem.length < 1) {
+				return null;
+			}
+			codeText = codeElem.text();
 			break;
 		case 'deletion':
-			codeText = $(elem).find('td.blob-code-deletion > span.blob-code-inner').text();
+			var codeElem = $(elem).find('td.blob-code-deletion > span.blob-code-inner');
+			if(codeElem.length < 1) {
+				return null;
+			}
+			codeText = codeElem.text();
 			break;
 		case 'unchanged':
-			codeText = $(elem).first('td.blob-code-context > span.blob-code-inner').text();
+			var codeElem = $(elem).find('td.blob-code-context > span.blob-code-inner');
+			if(codeElem.length < 1) {
+				return null;
+			}
+			// In split diffs there are two copies of the unchanged code
+			codeText = codeElem.first().text();
 			break;
 		default: // Hopefully never happens
 			codeText = '';
@@ -731,6 +781,13 @@ function changeType(elem) {
 	} else {
 		return 'unchanged';
 	}
+}
+
+function isCodeLine(elem) {
+	if(isExpandableLine(elem) || isCodeMarker(elem) || isInlineComment(elem)) {
+		return false;
+	}
+	return true;
 }
 
 
