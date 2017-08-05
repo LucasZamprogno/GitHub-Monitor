@@ -238,23 +238,16 @@ function checkWindowGaze(response) {
 // Add on session ID and send event to the server
 function sendDataToSave(data) {
 	if(ws && ws.readyState === WebSocket.OPEN && (reporting || data.hasOwnProperty('override'))) {
-		if(data['type'] === 'diff') {
-			for(var i in data['allLineDetails']) {
-				data['allLineDetails'][i] = privacyFilter(data['allLineDetails'][i])
-			}
-		}
-		data = privacyFilter(data);
-		if(data) { // Data will be null if it shouldn't be reported at all
-			data['id'] = sessionId;
-			data = JSON.stringify(data); // Weak typiiiiiing
-			if(saveLocation === 'local') {
-				ws.send(data);
-			} else if(saveLocation === 'remote') {
-				var xmlhttp = new XMLHttpRequest();
-				xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
-				xmlhttp.setRequestHeader('Content-Type', 'application/json');
-				xmlhttp.send(data);
-			}
+		privacyFilter(data);
+		data['id'] = sessionId;
+		data = JSON.stringify(data); // Weak typiiiiiing
+		if(saveLocation === 'local') {
+			ws.send(data);
+		} else if(saveLocation === 'remote') {
+			var xmlhttp = new XMLHttpRequest();
+			xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
+			xmlhttp.setRequestHeader('Content-Type', 'application/json');
+			xmlhttp.send(data);
 		}
 	}
 }
@@ -269,12 +262,18 @@ To add a privacy setting, add an input field to popup.html with class="privacy"
 and a unique ID, then add a case here that matches that id.
 */
 function privacyFilter(obj) {
+	for(var key in obj) {
+		if(obj[key] !== null && typeof obj[key] === 'object') {
+			privacyFilter(obj[key]);
+		}
+	}
 	for(var filter of privacyFilters) {
 		switch(filter) {
 			case 'issues':
 				if(obj.hasOwnProperty('target') && obj['target'].includes('Issue/Pull request: ')) {
 					obj['target'] = 'Issue/Pull request';
 				}
+				break;
 			case 'google':
 				if(obj.hasOwnProperty('target') && obj['target'].includes('Google result:')) {
 					obj['target'] = 'Google result';
