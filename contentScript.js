@@ -132,29 +132,22 @@ function messageListener(request, sender, sendResponse) {
 		case 'gazeLoss':
 			handleGazeLoss(request['timestamp'])
 			break;
-		case 'diff':
+		case 'diffs':
 			if(request['pageHref'] !== window.location.href) {
 				return; // User left the page already
 			}
 			var diffInfo = {
-				'comType': 'diff',
-				'type': 'diff',
+				'comType': 'diffs',
+				'type': 'diffs',
 				'pageHref': request['pageHref'],
-				'file': request['file']
+				'diffs': []
 			};
 			$('div.file').each(function(index) {
-				var filename = $(this).find('div.file-header > div.file-info > a').attr('title');
-				if(filename === request['file']) {
-					var data = extractMetadata(this);
-					for(var key in data) {
-						diffInfo[key] = data[key];
-					}
-					chrome.runtime.sendMessage(diffInfo);
-					return false; // break each loop
-				} else {
-					return true; // continue in to next each loop iteration
-				}
+				diffInfo['diffs'].push(extractMetadata(this));
 			});
+			if(diffInfo['diffs'].length > 0) {
+				chrome.runtime.sendMessage(diffInfo);
+			}
 			break;
 	}
 }
@@ -389,7 +382,8 @@ function handleGazeLoss(timestamp) {
 
 // For when background.js requests diff info because a gaze fell on a diff
 function extractMetadata(file) {
-	var rows = $(file).find('div.js-file-content > div.data > table.diff-table > tbody > tr');
+	var filename = $(file).find('div.file-header > div.file-info > a').attr('title');
+	var rows = $(file).find('div.blob-wrapper > table.diff-table > tbody > tr');
 	if(rows.length < 1) {
 		return null;
 	}
@@ -456,10 +450,11 @@ function extractMetadata(file) {
 	}
 	var totalLines = additions + deletions + unchanged;
 	return {
+		'file': filename,
 		'totalLines': totalLines,
-		'additionPercentage': additions / totalLines,
-		'deletionPercentage': deletions / totalLines,
-		'unchangedPercentage': unchanged / totalLines,
+		'additionPercentage': Math.round(100 * additions / totalLines)/100,
+		'deletionPercentage': Math.round(100 * deletions / totalLines)/100,
+		'unchangedPercentage': Math.round(100 * unchanged / totalLines)/100,
 		'indentType': indentType,
 		'medianIndent': median(indentations),
 		'minIndent': Math.min.apply(Math, indentations), // From https://stackoverflow.com/questions/1669190/find-the-min-max-element-of-an-array-in-javascript

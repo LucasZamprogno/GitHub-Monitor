@@ -41,7 +41,7 @@ function messageListener(request, sender, sendResponse) {
 	if(sender.hasOwnProperty('tab')) { 
 		switch(request['comType']) {
 			case 'event': // Event of any sort to be saved in the dataset
-				getDiffIfNeeded(request, sender);
+				getDiffsIfNeeded(request, sender);
 				pageChangeIfNeeded(request);
 				delete request['comType'];
 				sendDataToSave(request);
@@ -53,20 +53,22 @@ function messageListener(request, sender, sendResponse) {
 				}
 				// do
 				break;
-			case 'diff': // Diff metadata to be saved in the dataset
+			case 'diffs': // Diff metadata to be saved in the dataset
 				delete request['comType'];
+				console.log(request);
 				sendDataToSave(request);
 				break;
 		}
 	}
 }
 
-function getDiffIfNeeded(obj, sender) {
-	if(obj['type'] === 'gaze' && obj['target'] === 'code' && isFromNewDiff(obj)) {
-		var diff = {'pageHref': obj['pageHref'], 'file': obj['file']};
-		savedDiffs.push(diff);
-		diff['comType'] = 'diff';
-		chrome.tabs.sendMessage(sender['tab'].id, diff);
+function getDiffsIfNeeded(obj, sender) {
+	var href = obj['pageHref']
+	var sawCode = obj['type'] === 'gaze' && obj['target'] === 'code';
+	var commonPageForDiffs = obj.hasOwnProperty('pageType') && (obj['pageType'] === 'Github pull request' || obj['pageType'] === 'Github commit' || obj['pageType'] === 'Github pull request commit');
+	if((sawCode || commonPageForDiffs) && !savedDiffs.includes(href)) {
+		savedDiffs.push(href);
+		chrome.tabs.sendMessage(sender['tab'].id, {'comType': 'diffs', 'pageHref': href});
 	}
 }
 
@@ -261,14 +263,6 @@ function updatePopupGazeStatus(status) {
 	chrome.runtime.sendMessage({'status': status});
 }
 
-function isFromNewDiff(obj) {
-	for(var diff of savedDiffs) {
-		if(diff['pageHref'] === obj['pageHref'] && diff['file'] === obj['file']) {
-			return false;
-		}
-	}
-	return true;
-}
 /*
 Substitute any unwanted information, or return null if the event should not be reported at all
 To add a privacy setting, add an input field to popup.html with class="privacy"
