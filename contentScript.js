@@ -13,7 +13,9 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	'td.blob-num-deletion': 'Special case, won\'t see this', // Diff line code
 	'td.blob-code-context': 'Special case, won\'t see this', // Diff line code
 	'td.blob-num-context': 'Special case, won\'t see this', // Diff line code
-	'table.diff-table > tbody > tr': 'Special case, won\'t see this', // Non-code diff lines
+	'table > tbody > tr.js-expandable-line': 'Special case, won\'t see this', // Expandable diff separator
+	'table > tbody > tr.inline-comments': 'Inline diff comment',
+	'table > tbody > tr': 'Special case, won\'t see this', // All other table lines
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
 	// Main repo page
@@ -264,7 +266,7 @@ function mouseListenerDebounce(mutations) {
 function addMouseListeners() {
 	for(var identifier in getCurrentTargets()) {
 		// Ugly hardcoding. Don't add listeners to every code element
-		if(identifier === 'table.diff-table > tbody > tr' || identifier.includes('td.blob')) {
+		if(identifier === 'table > tbody > tr' || identifier.includes('td.blob')) {
 			continue;
 		}
 		var found = $(identifier);
@@ -400,11 +402,17 @@ function extractMetadata(file) {
 		var deletionComponent;
 		var unchangedComponent;
 		if(!isCodeLine(elem)) {
-			rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
+			if(isExpandableLine(elem)) {
+				rowData.push(getTargetDescription('table > tbody > tr.js-expandable-line', elem));
+			} else if (isInlineComment(elem)) {
+				rowData.push(getTargetDescription('table > tbody > tr.inline-comments', elem));
+			} else {
+				rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
+			}
 		} else {
-			additionComponent = githubLineDetails(elem, 'addition');
-			deletionComponent = githubLineDetails(elem, 'deletion');
-			unchangedComponent = githubLineDetails(elem, 'unchanged');
+			additionComponent = diffLineDetails(elem, 'addition');
+			deletionComponent = diffLineDetails(elem, 'deletion');
+			unchangedComponent = diffLineDetails(elem, 'unchanged');
 			// In split diff, can be addition, deletion, both, or neither (unchanged)
 			// deletion must be pushed first to match unified diff
 			if(deletionComponent) {
@@ -500,22 +508,24 @@ function getTargetDescription(key, elem) {
 			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
 		case 'td.blob-code-addition':
 		case 'td.blob-num-addition':
-			return githubLineDetails(elem.closest('tr'), 'addition')
+			return diffLineDetails(elem.closest('tr'), 'addition')
 		case 'td.blob-code-deletion':
 		case 'td.blob-num-deletion':
-			return githubLineDetails(elem.closest('tr'), 'deletion')
+			return diffLineDetails(elem.closest('tr'), 'deletion')
 		case 'td.blob-code-context':
 		case 'td.blob-num-context':
-			return githubLineDetails(elem.closest('tr'), 'unchanged')
-		case 'table.diff-table > tbody > tr': // Github Diff code line
-			if(isExpandableLine(elem)) {
-				return expandbleLineDetail('Expandable line details', elem);
-			} else if(isCodeMarker(elem)) {
+			return diffLineDetails(elem.closest('tr'), 'unchanged')
+		case 'table > tbody > tr.js-expandable-line': // Github Diff code line
+			return expandbleLineDetail('Expandable line details', elem);
+		case 'table > tbody > tr':
+			if(isCodeMarker(elem)) { // Other row type with no distinguishing feature
 				return "File start/end marker";
-			} else if(isInlineComment(elem)) {
-				return "Inline diff comment";
 			}
-			return 'Unknown github row type';
+			try {
+				return fileLineDetail(elem)
+			} catch (e) {
+				return 'Untracked table row'; // Just in case
+			}
 		default: // Used assigned label mapping in 'targets' global
 			return getCurrentTargets()[key];
 	}
@@ -523,7 +533,7 @@ function getTargetDescription(key, elem) {
 
 // Get the specifics of a line of code (line numbers, code text)
 // elem is a row, type is 'addition', 'deletion', or 'unchanged'
-function githubLineDetails(elem, type) {
+function diffLineDetails(elem, type) {
 	var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
 	var file = fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
 	// Line nums will be null if not present (addition or deletion lines)
@@ -592,14 +602,14 @@ function expandbleLineDetail(source, elem) {
 	var lineRegex = new RegExp('\\d+,\\d+', 'g');
 	var res = lineRegex.exec(text);
 	if(res) {
-		var lines = res[0].split(',');
+	var lines = res[0].split(',');
 		obj['oldStart'] = parseInt(lines[0]);
 		obj['oldEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
 		lines = lineRegex.exec(text)[0].split(',');
 		obj['newStart'] = parseInt(lines[0]);
 		obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
 		obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
-	} else { // Some expandable lines at the bottom have no info at all
+	} else { // Expandable lines at bottom of file with no info
 		obj['oldStart'] = null;
 		obj['oldEnd'] = null;
 		obj['newStart'] = null;
@@ -607,6 +617,34 @@ function expandbleLineDetail(source, elem) {
 		obj['codeText'] = '';
 	}
 	return obj;
+}
+
+function fileLineDetail(elem) {
+	var filename = $(elem).closest('div.repository-content').find('strong.final-path').text();
+	// Line nums will be null if not present (addition or deletion lines)
+	var lineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
+	var indentType = 'none'; // space, tab, or none
+	var indentValue = 0;
+	var codeElem = $(elem).find('td.blob-code-inner');
+	codeText = codeElem.text();
+	if(codeText[0] === '\t') {
+		indentType = 'tab';			
+	} else if(codeText[0] === ' ') {
+		indentType = 'space';
+	}
+	if(indentType !== 'none') {
+		indentValue = indentationValue(codeText);
+	}
+	codeText = codeText.trim();
+	return {
+		'target': 'fileCode',
+		'file': filename,
+		'lineNum': lineNum,
+		'length': codeLengthNoWhitespace(codeText),
+		'indentType': indentType,
+		'indentValue': indentValue,
+		'codeText': codeText
+	};
 }
 
 /****************
@@ -759,13 +797,16 @@ function isCodeMarker(elem) {
 	return elem[0].hasAttribute('data-position') && !elem.hasClass('js-expandable-line');
 }
 
-// Expandable blue code markers
 function isExpandableLine(elem) {
 	return elem.hasClass('js-expandable-line');
 }
 
 function isInlineComment(elem) {
 	return elem.hasClass('inline-comments');
+}
+
+function notDiff(elem) {
+	return !elem.closest('table').hasClass('diff-table');
 }
 
 function changeType(elem) {

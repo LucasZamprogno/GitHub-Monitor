@@ -51,11 +51,9 @@ function messageListener(request, sender, sendResponse) {
 				if(reporting) {
 					sendCoordToActiveTabs(request['x'], request['y']);
 				}
-				// do
 				break;
 			case 'diffs': // Diff metadata to be saved in the dataset
 				delete request['comType'];
-				console.log(request);
 				sendDataToSave(request);
 				break;
 		}
