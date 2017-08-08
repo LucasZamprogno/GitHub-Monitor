@@ -1,4 +1,4 @@
-var mouseInput = true; // Using the mouse to fake gaze data?
+var mouseInput = false; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var RECALIBRATION_TIME = 1000;

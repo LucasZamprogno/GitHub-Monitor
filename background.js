@@ -53,6 +53,7 @@ function messageListener(request, sender, sendResponse) {
 				}
 				break;
 			case 'diffs': // Diff metadata to be saved in the dataset
+				savedDiffs.push(request['pageHref']);
 				delete request['comType'];
 				sendDataToSave(request);
 				break;
@@ -61,11 +62,10 @@ function messageListener(request, sender, sendResponse) {
 }
 
 function getDiffsIfNeeded(obj, sender) {
-	var href = obj['pageHref']
+	var href = obj['pageHref'];
 	var sawCode = obj['type'] === 'gaze' && obj['target'] === 'code';
 	var commonPageForDiffs = obj.hasOwnProperty('pageType') && (obj['pageType'] === 'Github pull request' || obj['pageType'] === 'Github commit' || obj['pageType'] === 'Github pull request commit');
 	if((sawCode || commonPageForDiffs) && !savedDiffs.includes(href)) {
-		savedDiffs.push(href);
 		chrome.tabs.sendMessage(sender['tab'].id, {'comType': 'diffs', 'pageHref': href});
 	}
 }
