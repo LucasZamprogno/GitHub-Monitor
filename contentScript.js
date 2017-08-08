@@ -8,11 +8,12 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	'div.review-comment': 'Code review comment', // typically inline with other elements
 	// These elements are child of the tr element following them, they MUST come first
 	'td.blob-code-addition': 'Special case, won\'t see this', // Diff line code
-	'td.blob-num-addition': 'Special case, won\'t see this', // Diff line code
+	'td.blob-num-addition': 'Special case, won\'t see this', // Diff line number
 	'td.blob-code-deletion': 'Special case, won\'t see this', // Diff line code
-	'td.blob-num-deletion': 'Special case, won\'t see this', // Diff line code
+	'td.blob-num-deletion': 'Special case, won\'t see this', // Diff line number
 	'td.blob-code-context': 'Special case, won\'t see this', // Diff line code
-	'td.blob-num-context': 'Special case, won\'t see this', // Diff line code
+	'td.blob-num-context': 'Special case, won\'t see this', // Diff line number
+	'table > tbody > tr.blob-expanded': 'Special case, won\'t see this', // Diff line row
 	'table > tbody > tr.js-expandable-line': 'Special case, won\'t see this', // Expandable diff separator
 	'table > tbody > tr.inline-comments': 'Inline diff comment',
 	'table > tbody > tr': 'Special case, won\'t see this', // All other table lines
@@ -508,14 +509,16 @@ function getTargetDescription(key, elem) {
 			return expandbleLineDetail('Expandable line button', $(elem).closest('tr.js-expandable-line'));
 		case 'td.blob-code-addition':
 		case 'td.blob-num-addition':
-			return diffLineDetails(elem.closest('tr'), 'addition')
+			return diffLineDetails(elem.closest('tr'), 'addition');
 		case 'td.blob-code-deletion':
 		case 'td.blob-num-deletion':
-			return diffLineDetails(elem.closest('tr'), 'deletion')
+			return diffLineDetails(elem.closest('tr'), 'deletion');
 		case 'td.blob-code-context':
 		case 'td.blob-num-context':
-			return diffLineDetails(elem.closest('tr'), 'unchanged')
-		case 'table > tbody > tr.js-expandable-line': // Github Diff code line
+			return diffLineDetails(elem.closest('tr'), 'unchanged');
+		case 'table > tbody > tr.blob-expanded':
+			return diffLineDetails(elem, 'expanded');
+		case 'table > tbody > tr.js-expandable-line':
 			return expandbleLineDetail('Expandable line details', elem);
 		case 'table > tbody > tr':
 			if(isCodeMarker(elem)) { // Other row type with no distinguishing feature
@@ -532,7 +535,7 @@ function getTargetDescription(key, elem) {
 }
 
 // Get the specifics of a line of code (line numbers, code text)
-// elem is a row, type is 'addition', 'deletion', or 'unchanged'
+// elem is a row, type is 'addition', 'deletion', 'unchanged', or 'expanded'
 function diffLineDetails(elem, type) {
 	var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
 	var file = fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
@@ -543,6 +546,7 @@ function diffLineDetails(elem, type) {
 	var indentValue = 0;
 	switch(type) {
 		// Return null if the specified type doesn't exist in this row
+		// These have to be different for split view where you can have multiple blob-code-inner in same row
 		case 'addition':
 			var codeElem = $(elem).find('td.blob-code-addition > span.blob-code-inner');
 			if(codeElem.length < 1) {
@@ -559,6 +563,14 @@ function diffLineDetails(elem, type) {
 			break;
 		case 'unchanged':
 			var codeElem = $(elem).find('td.blob-code-context > span.blob-code-inner');
+			if(codeElem.length < 1) {
+				return null;
+			}
+			// In split diffs there are two copies of the unchanged code
+			codeText = codeElem.first().text();
+			break;
+		case 'expanded':
+			var codeElem = $(elem).find('td.blob-code-inner');
 			if(codeElem.length < 1) {
 				return null;
 			}
