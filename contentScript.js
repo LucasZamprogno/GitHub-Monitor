@@ -2,10 +2,9 @@ var mouseInput = false; // Using the mouse to fake gaze data?
 var MUTATION_TIMEOUT = 200; // Time to wait for DOM mutations to finish
 var PAGE_VIEW_TIME = 500; // How long user can look away before a page gaze is 'finished'
 var RECALIBRATION_TIME = 1000;
-var githubTargets = { // Some pretty useless things are commented out in case we want them later
+var githubTargets = { // Order may matter if an element is a child of another. First in object has higher precedence
 	// General/shared
 	'a.diff-expander': 'Special case, won\'t see this', // Diff separator expansion button
-	'div.review-comment': 'Code review comment', // typically inline with other elements
 	// These elements are child of the tr element following them, they MUST come first
 	'td.blob-code-addition': 'Special case, won\'t see this', // Diff line code
 	'td.blob-num-addition': 'Special case, won\'t see this', // Diff line number
@@ -19,6 +18,7 @@ var githubTargets = { // Some pretty useless things are commented out in case we
 	'table > tbody > tr': 'Special case, won\'t see this', // All other table lines
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
+	'div.review-comment': 'Code review comment', // typically inline with other elements
 	// Main repo page
 	'div.file-wrap': 'Repo file explorer',
 	'div#readme': 'Repo README',
