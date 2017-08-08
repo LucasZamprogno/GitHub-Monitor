@@ -544,41 +544,33 @@ function diffLineDetails(elem, type) {
 	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
 	var indentType = 'none'; // space, tab, or none
 	var indentValue = 0;
+	var codeElem;
+	var codeText;
 	switch(type) {
 		// Return null if the specified type doesn't exist in this row
 		// These have to be different for split view where you can have multiple blob-code-inner in same row
 		case 'addition':
 			var codeElem = $(elem).find('td.blob-code-addition > span.blob-code-inner');
-			if(codeElem.length < 1) {
-				return null;
-			}
-			codeText = codeElem.text();
 			break;
 		case 'deletion':
 			var codeElem = $(elem).find('td.blob-code-deletion > span.blob-code-inner');
-			if(codeElem.length < 1) {
-				return null;
-			}
-			codeText = codeElem.text();
 			break;
 		case 'unchanged':
 			var codeElem = $(elem).find('td.blob-code-context > span.blob-code-inner');
-			if(codeElem.length < 1) {
-				return null;
-			}
-			// In split diffs there are two copies of the unchanged code
-			codeText = codeElem.first().text();
 			break;
 		case 'expanded':
 			var codeElem = $(elem).find('td.blob-code-inner');
-			if(codeElem.length < 1) {
-				return null;
-			}
-			// In split diffs there are two copies of the unchanged code
-			codeText = codeElem.first().text();
 			break;
 		default: // Hopefully never happens
 			return null;
+	}
+	if(codeElem.length < 1) {
+		return null;
+	}
+	if(type === 'unchanged' || type === 'expanded') { // 2 copies of code
+			codeText = codeElem.first().text();
+	} else {
+			codeText = codeElem.text();
 	}
 	if(codeText !== '') {
 		codeText = codeText.substring(1); // Remove +, -, or space
