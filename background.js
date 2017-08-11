@@ -63,9 +63,8 @@ function messageListener(request, sender, sendResponse) {
 
 function getDiffsIfNeeded(obj, sender) {
 	var href = obj['pageHref'];
-	var sawCode = obj['type'] === 'gaze' && obj['target'] === 'code';
-	var commonPageForDiffs = obj.hasOwnProperty('pageType') && (obj['pageType'] === 'Github pull request' || obj['pageType'] === 'Github commit' || obj['pageType'] === 'Github pull request commit');
-	if((sawCode || commonPageForDiffs) && !savedDiffs.includes(href)) {
+	var commonPageForDiffs = obj['pageType'] === 'Github pull request' || obj['pageType'] === 'Github commit' || obj['pageType'] === 'Github pull request commit';
+	if(obj['type'] === 'gaze' && (obj['target'] === 'code' || commonPageForDiffs) && !savedDiffs.includes(href)) {
 		chrome.tabs.sendMessage(sender['tab'].id, {'comType': 'diffs', 'pageHref': href});
 	}
 }
@@ -97,7 +96,9 @@ function connectToTracker() {
 		var obj = JSON.parse(e.data);
 		var x = obj['x'];
 		var y = obj['y'];
-		sendCoordToActiveTabs(x, y);
+		if(reporting) {
+			sendCoordToActiveTabs(x, y);
+		}
 	}
 	ws.onclose = function(e) {
 		ws = null;

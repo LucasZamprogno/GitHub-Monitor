@@ -460,6 +460,7 @@ function extractMetadata(file) {
 	var totalLines = additions + deletions + unchanged;
 	return {
 		'file': filename,
+		'pageHref': window.location.href,
 		'totalLines': totalLines,
 		'additionPercentage': Math.round(100 * additions / totalLines)/100,
 		'deletionPercentage': Math.round(100 * deletions / totalLines)/100,
