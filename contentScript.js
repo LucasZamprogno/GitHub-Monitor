@@ -14,7 +14,7 @@ var githubTargets = { // Order may matter if an element is a child of another. F
 	'td.blob-num-context': 'Special case, won\'t see this', // Diff line number
 	'table > tbody > tr.blob-expanded': 'Special case, won\'t see this', // Diff line row
 	'table > tbody > tr.js-expandable-line': 'Special case, won\'t see this', // Expandable diff separator
-	'table > tbody > tr.inline-comments': 'Inline diff comment',
+	'table > tbody > tr.inline-comments': 'Special case, won\'t see this',
 	'table > tbody > tr': 'Special case, won\'t see this', // All other table lines
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
@@ -393,11 +393,13 @@ function extractMetadata(file) {
 	var rowData = [];
 	var lengths = [];
 	var indentations = [];
+	var totalLines = 0;
 	var additions = 0;
 	var deletions = 0;
 	var unchanged = 0;
 	var indentType = 'none';
 	rows.each(function(index) {
+		totalLines++;
 		var elem = $(this);
 		var additionComponent;
 		var deletionComponent;
@@ -408,7 +410,7 @@ function extractMetadata(file) {
 			} else if (isInlineComment(elem)) {
 				rowData.push(getTargetDescription('table > tbody > tr.inline-comments', elem));
 			} else {
-				rowData.push(getTargetDescription('table.diff-table > tbody > tr', elem));
+				rowData.push(getTargetDescription('table > tbody > tr', elem));
 			}
 		} else {
 			additionComponent = diffLineDetails(elem, 'addition');
@@ -457,14 +459,15 @@ function extractMetadata(file) {
 			continue;
 		}
 	}
-	var totalLines = additions + deletions + unchanged;
+	var totalCodeLines = additions + deletions + unchanged;
 	return {
 		'file': filename,
 		'pageHref': window.location.href,
 		'totalLines': totalLines,
-		'additionPercentage': Math.round(100 * additions / totalLines)/100,
-		'deletionPercentage': Math.round(100 * deletions / totalLines)/100,
-		'unchangedPercentage': Math.round(100 * unchanged / totalLines)/100,
+		'totalCodeLines': totalCodeLines,
+		'additionPercentage': Math.round(100 * additions / totalCodeLines)/100,
+		'deletionPercentage': Math.round(100 * deletions / totalCodeLines)/100,
+		'unchangedPercentage': Math.round(100 * unchanged / totalCodeLines)/100,
 		'indentType': indentType,
 		'medianIndent': median(indentations),
 		'minIndent': Math.min.apply(Math, indentations), // From https://stackoverflow.com/questions/1669190/find-the-min-max-element-of-an-array-in-javascript
@@ -521,9 +524,11 @@ function getTargetDescription(key, elem) {
 			return diffLineDetails(elem, 'expanded');
 		case 'table > tbody > tr.js-expandable-line':
 			return expandbleLineDetail('Expandable line details', elem);
+		case 'table > tbody > tr.inline-comments':
+			return diffCommentDetail(elem);
 		case 'table > tbody > tr':
 			if(isCodeMarker(elem)) { // Other row type with no distinguishing feature
-				return "File start/end marker";
+				return expandbleLineDetail('File start marker', elem);
 			}
 			try {
 				return fileLineDetail(elem)
@@ -538,8 +543,7 @@ function getTargetDescription(key, elem) {
 // Get the specifics of a line of code (line numbers, code text)
 // elem is a row, type is 'addition', 'deletion', 'unchanged', or 'expanded'
 function diffLineDetails(elem, type) {
-	var fileString = getTargetDescription('div.file', elem.closest('div.file')); // Format 'File: filename.ext'
-	var file = fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
+	var file = getDiffRowFile(elem);
 	// Line nums will be null if not present (addition or deletion lines)
 	var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
 	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
@@ -587,6 +591,7 @@ function diffLineDetails(elem, type) {
 	}
 	return {
 		'target': 'code',
+		'index': elem.index(),
 		'file': file,
 		'change': type,
 		'oldLineNum': oldLineNum,
@@ -601,7 +606,9 @@ function diffLineDetails(elem, type) {
 // Details in the expandable separator lines in a diff (source is the button or the line)
 function expandbleLineDetail(source, elem) {
 	var obj = {
-		'target': source
+		'target': source,
+		'index': elem.index(),
+		'file': getDiffRowFile(elem)
 	};
 	var text = elem.text().trim()
 	var lineRegex = new RegExp('\\d+,\\d+', 'g');
@@ -613,7 +620,11 @@ function expandbleLineDetail(source, elem) {
 		lines = lineRegex.exec(text)[0].split(',');
 		obj['newStart'] = parseInt(lines[0]);
 		obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
-		obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
+		if(!isCodeMarker(elem)) {
+			obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
+		} else {
+			obj['codeText'] = '';
+		}
 	} else { // Expandable lines at bottom of file with no info
 		obj['oldStart'] = null;
 		obj['oldEnd'] = null;
@@ -622,6 +633,14 @@ function expandbleLineDetail(source, elem) {
 		obj['codeText'] = '';
 	}
 	return obj;
+}
+
+function diffCommentDetail(elem) {
+	return {
+		'target': 'Inline diff comment',
+		'index': elem.index(),
+		'file': getDiffRowFile(elem)
+	}
 }
 
 function fileLineDetail(elem) {
@@ -829,6 +848,11 @@ function isCodeLine(elem) {
 		return false;
 	}
 	return true;
+}
+
+function getDiffRowFile(row) {
+	var fileString = getTargetDescription('div.file', row.closest('div.file')); // Format 'File: filename.ext'
+	return fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
 }
 
 
