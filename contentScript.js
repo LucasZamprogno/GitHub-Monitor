@@ -443,7 +443,7 @@ function extractMetadata(file) {
 	});
 	for(var row of rowData) {
 		try {
-			if(row['target'] === 'code') {
+			if(row['target'] === 'diffCode') {
 				lengths.push(row['length']);
 				indentations.push(row['indentValue']);
 				if(row['indentType'] !== 'none') {
@@ -610,7 +610,7 @@ function diffLineDetails(elem, type) {
 		codeText = codeText.trim();
 	}
 	return {
-		'target': 'code',
+		'target': 'diffCode',
 		'index': elem.index(),
 		'file': file,
 		'diffIndex': diffIndex,

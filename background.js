@@ -65,7 +65,7 @@ function messageListener(request, sender, sendResponse) {
 function getDiffsIfNeeded(obj, sender) {
 	var href = obj['pageHref'];
 	var commonPageForDiffs = obj['pageType'] === 'Github pull request' || obj['pageType'] === 'Github commit' || obj['pageType'] === 'Github pull request commit';
-	if(obj['type'] === 'gaze' && (obj['target'] === 'code' || commonPageForDiffs) && !savedDiffs.includes(href)) {
+	if(obj['type'] === 'gaze' && (obj['target'] === 'diffCode' || commonPageForDiffs) && !savedDiffs.includes(href)) {
 		chrome.tabs.sendMessage(sender['tab'].id, {'comType': 'diffs', 'pageHref': href});
 	}
 }
