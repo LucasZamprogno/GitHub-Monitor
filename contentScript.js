@@ -88,7 +88,7 @@ var lastGaze = Date.now(); // For page tracking, when was the last time a gaze w
 var recalibrationInterval = null; // How often to check for a window move, starts after first calibration
 var pageViewInterval = null; // How often to check if the user has been looking away from the page
 
-var mouseListenerTimeout = null; // Used when waiting for DOM changes to finish before adding listeners
+var debounceTimeout = null; // Used when waiting for DOM changes to finish before adding listeners
 
 var tracked = isTracked(); // Is this a page we have target HTML elements for
 
@@ -207,7 +207,7 @@ function addAllListeners() {
 	document.addEventListener('paste', genericEventHandler);
 	document.addEventListener('contextmenu', genericEventHandler);
 	document.addEventListener('keydown', genericEventHandler)
-	addMouseListeners();
+	modify();
 
 	// Wait for initial calibration
 	document.body.addEventListener('mousemove', calibrate);
@@ -234,39 +234,47 @@ function addAllListeners() {
 	}
 
 	// Set mouse listeners on specific elements once the page has stopped loading new elements
-	var observer = new MutationObserver(mouseListenerDebounce);
+	var observer = new MutationObserver(DomDebounce);
 	var config = {
 		subtree: true,
-		attributes: true
+		childList: true
 	};
 	observer.observe(document, config);
 }
 
 /*
-After MUTATION_TIMEOUT milliseconds of no DOM mutations, add mouseenter/leave listeners to targets.
-This is needed because some page changes don't refresh the page (setup won't rerun),
-and new listeners may be needed (document listeners will persist so don't need to be added like this).
+After MUTATION_TIMEOUT milliseconds of no DOM mutations, make modifications.
+This is needed because some page changes don't refresh the page (initial setup won't rerun),
+but new actions may be needed (document listeners will persist so don't need to be added like this).
 Kind of like a debounce function but it waits until signals have stopped before firing.
 */
-function mouseListenerDebounce(mutations) {
-		if(mouseListenerTimeout === null) { // First DOM change in a while? Set the timer
-			mouseListenerTimeout = setTimeout(function(){
-				addMouseListeners();
-				mouseListenerTimeout = null;
-			}, MUTATION_TIMEOUT);
-		} else { // Timer was already running? Clear it and set a new one (reset to MUTATION_TIMEOUT remaining)
-			clearTimeout(mouseListenerTimeout);
-			mouseListenerTimeout = setTimeout(function(){
-				addMouseListeners();
-				mouseListenerTimeout = null;
-			}, MUTATION_TIMEOUT);
-		}
+function DomDebounce(mutations) {
+	console.log('mutation')
+	if(debounceTimeout === null) { // First DOM change in a while? Set the timer
+		debounceTimeout = setTimeout(function(){
+			modify();
+			debounceTimeout = null;
+		}, MUTATION_TIMEOUT);
+	} else { // Timer was already running? Clear it and set a new one (reset to MUTATION_TIMEOUT remaining)
+		clearTimeout(debounceTimeout);
+		debounceTimeout = setTimeout(function(){
+			modify();
+			debounceTimeout = null;
+		}, MUTATION_TIMEOUT);
 	}
+}
 
 // Add mouseenter/mouseleave listeners to any present targets
+function modify() {
+	console.log('firing');
+	addMouseListeners();
+	indexDiffs(); // This will trigger the observer again!
+	debounceTimeout = null; // Cancel the timeout from ^
+}
+
 function addMouseListeners() {
 	for(var identifier in getCurrentTargets()) {
-		// Ugly hardcoding. Don't add listeners to every code element
+		// Ugly hardcoding. Don't add mouse listeners to any code elements
 		if(identifier === 'table > tbody > tr' || identifier.includes('td.blob')) {
 			continue;
 		}
@@ -282,7 +290,12 @@ function addMouseListeners() {
 		item.addEventListener('mouseenter', githubFileMouseEventHandler);
 		item.addEventListener('mouseleave', githubFileMouseEventHandler);
 	}
-	// Bitbucket adding removed
+}
+
+function indexDiffs() {
+	$('div.file').each(function(index) {
+		$(this).attr('diffIndex', index);
+	});
 }
 
 /*************************
@@ -386,6 +399,7 @@ function handleGazeLoss(timestamp) {
 // For when background.js requests diff info because a gaze fell on a diff
 function extractMetadata(file) {
 	var filename = $(file).find('div.file-header > div.file-info > a').attr('title');
+	var diffIndex = $(file).attr('diffIndex');
 	var rows = $(file).find('div.blob-wrapper > table.diff-table > tbody > tr');
 	if(rows.length < 1) {
 		return null;
@@ -462,6 +476,7 @@ function extractMetadata(file) {
 	var totalCodeLines = additions + deletions + unchanged;
 	return {
 		'file': filename,
+		'diffIndex': diffIndex,
 		'pageHref': window.location.href,
 		'totalLines': totalLines,
 		'totalCodeLines': totalCodeLines,
@@ -544,6 +559,7 @@ function getTargetDescription(key, elem) {
 // elem is a row, type is 'addition', 'deletion', 'unchanged', or 'expanded'
 function diffLineDetails(elem, type) {
 	var file = getDiffRowFile(elem);
+	var diffIndex = $(elem).closest('div.file').attr('diffIndex');
 	// Line nums will be null if not present (addition or deletion lines)
 	var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
 	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
@@ -593,6 +609,7 @@ function diffLineDetails(elem, type) {
 		'target': 'code',
 		'index': elem.index(),
 		'file': file,
+		'diffIndex': diffIndex,
 		'change': type,
 		'oldLineNum': oldLineNum,
 		'newLineNum': newLineNum,
@@ -605,10 +622,12 @@ function diffLineDetails(elem, type) {
 
 // Details in the expandable separator lines in a diff (source is the button or the line)
 function expandbleLineDetail(source, elem) {
+	var diffIndex = $(elem).closest('div.file').attr('diffIndex');
 	var obj = {
 		'target': source,
 		'index': elem.index(),
-		'file': getDiffRowFile(elem)
+		'file': getDiffRowFile(elem),
+		'diffIndex': diffIndex
 	};
 	var text = elem.text().trim()
 	var lineRegex = new RegExp('\\d+,\\d+', 'g');
@@ -636,10 +655,12 @@ function expandbleLineDetail(source, elem) {
 }
 
 function diffCommentDetail(elem) {
+	var diffIndex = $(elem).closest('div.file').attr('diffIndex');
 	return {
 		'target': 'Inline diff comment',
 		'index': elem.index(),
-		'file': getDiffRowFile(elem)
+		'file': getDiffRowFile(elem),
+		'diffIndex': diffIndex
 	}
 }
 
