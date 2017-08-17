@@ -249,7 +249,6 @@ but new actions may be needed (document listeners will persist so don't need to 
 Kind of like a debounce function but it waits until signals have stopped before firing.
 */
 function DomDebounce(mutations) {
-	console.log('mutation')
 	if(debounceTimeout === null) { // First DOM change in a while? Set the timer
 		debounceTimeout = setTimeout(function(){
 			modify();
@@ -266,7 +265,6 @@ function DomDebounce(mutations) {
 
 // Add mouseenter/mouseleave listeners to any present targets
 function modify() {
-	console.log('firing');
 	addMouseListeners();
 	indexDiffs(); // This will trigger the observer again!
 	debounceTimeout = null; // Cancel the timeout from ^
@@ -560,6 +558,12 @@ function getTargetDescription(key, elem) {
 function diffLineDetails(elem, type) {
 	var file = getDiffRowFile(elem);
 	var diffIndex = $(elem).closest('div.file').attr('diffIndex');
+	var format;
+	if($(elem).closest('table').hasClass('file-diff-split')) {
+		format = 'split';
+	} else {
+		format = 'unified';
+	}
 	// Line nums will be null if not present (addition or deletion lines)
 	var oldLineNum = $(elem).find('td.blob-num')[0].getAttribute('data-line-number');
 	var newLineNum = $(elem).find('td.blob-num')[1].getAttribute('data-line-number');
@@ -610,6 +614,7 @@ function diffLineDetails(elem, type) {
 		'index': elem.index(),
 		'file': file,
 		'diffIndex': diffIndex,
+		'format': format,
 		'change': type,
 		'oldLineNum': oldLineNum,
 		'newLineNum': newLineNum,
@@ -656,11 +661,13 @@ function expandbleLineDetail(source, elem) {
 
 function diffCommentDetail(elem) {
 	var diffIndex = $(elem).closest('div.file').attr('diffIndex');
+	var hashedContent = stringHash($(elem).find('div.comment-body > p').text());
 	return {
 		'target': 'Inline diff comment',
 		'index': elem.index(),
 		'file': getDiffRowFile(elem),
-		'diffIndex': diffIndex
+		'diffIndex': diffIndex,
+		'hashedContent': hashedContent
 	}
 }
 
@@ -874,6 +881,20 @@ function isCodeLine(elem) {
 function getDiffRowFile(row) {
 	var fileString = getTargetDescription('div.file', row.closest('div.file')); // Format 'File: filename.ext'
 	return fileString.substring(6); // Cut out 'File: ' added by getTargetDescription
+}
+
+// From http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
+function stringHash(string) {
+	var hash = 0;
+	if (string.length == 0) {
+		return hash;
+	}
+	for (i = 0; i < string.length; i++) {
+		char = string.charCodeAt(i);
+		hash = ((hash<<5)-hash)+char;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+	return hash;
 }
 
 
