@@ -146,7 +146,7 @@ function messageListener(request, sender, sendResponse) {
 				'diffs': []
 			};
 			$('div.file').each(function(index) {
-				diffInfo['diffs'].push(extractMetadata(this));
+				diffInfo['diffs'].push(getDiffData(this));
 			});
 			if(diffInfo['diffs'].length > 0) {
 				chrome.runtime.sendMessage(diffInfo);
@@ -395,7 +395,7 @@ function handleGazeLoss(timestamp) {
 }
 
 // For when background.js requests diff info because a gaze fell on a diff
-function extractMetadata(file) {
+function getDiffData(file) {
 	var filename = $(file).find('div.file-header > div.file-info > a').attr('title');
 	var diffIndex = $(file).attr('diffIndex');
 	var rows = $(file).find('div.blob-wrapper > table.diff-table > tbody > tr');
@@ -403,15 +403,7 @@ function extractMetadata(file) {
 		return null;
 	}
 	var rowData = [];
-	var lengths = [];
-	var indentations = [];
-	var totalLines = 0;
-	var additions = 0;
-	var deletions = 0;
-	var unchanged = 0;
-	var indentType = 'none';
 	rows.each(function(index) {
-		totalLines++;
 		var elem = $(this);
 		var additionComponent;
 		var deletionComponent;
@@ -434,60 +426,17 @@ function extractMetadata(file) {
 				rowData.push(deletionComponent);
 			}
 			if(additionComponent) {
-				rowData.push(additionComponent);				
+				rowData.push(additionComponent);
 			}
 			if(unchangedComponent) {
 				rowData.push(unchangedComponent);
 			}
 		}
 	});
-	for(var row of rowData) {
-		try {
-			if(row['target'] === 'diffCode') {
-				lengths.push(row['length']);
-				indentations.push(row['indentValue']);
-				if(row['indentType'] !== 'none') {
-					if(indentType === 'none') {
-						indentType = row['indentType'];
-					} else if(row['indentType'] !== indentType) {
-						indentType = 'mixed';
-					}
-				}
-				switch(row['change']) {
-					case 'addition':
-						additions++;
-						break;
-					case 'deletion':
-						deletions++;
-						break;
-					case 'unchanged':
-						unchanged++;
-						break;
-				}
-			} else {
-				continue;
-			}
-		} catch (e) {
-			continue;
-		}
-	}
-	var totalCodeLines = additions + deletions + unchanged;
 	return {
 		'file': filename,
 		'diffIndex': diffIndex,
 		'pageHref': window.location.href,
-		'totalLines': totalLines,
-		'totalCodeLines': totalCodeLines,
-		'additionPercentage': Math.round(100 * additions / totalCodeLines)/100,
-		'deletionPercentage': Math.round(100 * deletions / totalCodeLines)/100,
-		'unchangedPercentage': Math.round(100 * unchanged / totalCodeLines)/100,
-		'indentType': indentType,
-		'medianIndent': median(indentations),
-		'minIndent': Math.min.apply(Math, indentations), // From https://stackoverflow.com/questions/1669190/find-the-min-max-element-of-an-array-in-javascript
-		'maxIndent': Math.max.apply(Math, indentations),
-		'medianLength': median(lengths),
-		'minLength': Math.min.apply(Math, lengths),
-		'maxLength': Math.max.apply(Math, lengths),
 		'allLineDetails': rowData
 	};
 }
@@ -841,6 +790,14 @@ function median(arr) {
 	} else {
 		return (arr[mid - 1] + arr[mid]) / 2;
 	}
+}
+
+function avg(arr) {
+	sum = 0;
+	for(var item of arr) {
+		sum += item;
+	}
+	return sum/arr.length;
 }
 
 // These are the blue lines in diffs that are NOT expandable
