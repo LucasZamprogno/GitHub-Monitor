@@ -145,6 +145,7 @@ function messageListener(request, sender, sendResponse) {
 				'pageHref': request['pageHref'],
 				'diffs': []
 			};
+			indexDiffs();
 			$('div.file').each(function(index) {
 				diffInfo['diffs'].push(getDiffData(this));
 			});
@@ -776,28 +777,6 @@ function indentationValue(code) {
 		i++
 	}
 	return depth;
-}
-
-// Finds the median. Not sure why Math doesn't have this
-function median(arr) {
-	arr.sort(function(a,b){return a-b;});
-	if(arr.length === 0) {
-		return 0;
-	}
-	var mid = Math.floor(arr.length/2);
-	if(arr.length % 2) { // Odd
-		return arr[mid]
-	} else {
-		return (arr[mid - 1] + arr[mid]) / 2;
-	}
-}
-
-function avg(arr) {
-	sum = 0;
-	for(var item of arr) {
-		sum += item;
-	}
-	return sum/arr.length;
 }
 
 // These are the blue lines in diffs that are NOT expandable

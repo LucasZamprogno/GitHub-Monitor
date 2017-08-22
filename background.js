@@ -54,9 +54,11 @@ function messageListener(request, sender, sendResponse) {
 				}
 				break;
 			case 'diffs': // Diff metadata to be saved in the dataset
-				savedDiffs.push(request['pageHref']);
-				delete request['comType'];
-				sendDataToSave(request);
+				if(!savedDiffs.includes(request['pageHref'])) {
+					savedDiffs.push(request['pageHref']);
+					delete request['comType'];
+					sendDataToSave(request);		
+				}
 				break;
 		}
 	}
