@@ -15,7 +15,6 @@ var githubTargets = { // Order may matter if an element is a child of another. F
 	'table > tbody > tr.blob-expanded': 'Special case, won\'t see this', // Diff line row
 	'table > tbody > tr.js-expandable-line': 'Special case, won\'t see this', // Expandable diff separator
 	'table > tbody > tr.inline-comments': 'Special case, won\'t see this',
-	'table > tbody > tr': 'Special case, won\'t see this', // All other table lines
 	'div.comment': 'Comment',
 	'form.js-new-comment-form': 'New comment form',
 	'div.review-comment': 'Code review comment', // typically inline with other elements
@@ -34,7 +33,8 @@ var githubTargets = { // Order may matter if an element is a child of another. F
 	'div.discussion-sidebar': 'Issue/Pull request sidebar',
 	'div.discussion-item': 'Pull request discussion action item',
 	'div.pull-merging': 'Pull request merge status',
-	'div.pull-request-review-menu': 'Pull request change review menu'
+	'div.pull-request-review-menu': 'Pull request change review menu',
+	'table > tbody > tr': 'Special case, won\'t see this' // All other table lines
 };
 var stackoverflowTargets = {
 	'div#question-header': 'Question title',
