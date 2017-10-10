@@ -281,7 +281,7 @@ function DomDebounce(mutations) {
 
 // Add mouseenter/mouseleave listeners to any present targets
 function modify() {
-	addMouseListeners();
+	//addMouseListeners();
 	indexDiffs(); // This will trigger the observer again!
 	debounceTimeout = null; // Cancel the timeout from ^
 }
