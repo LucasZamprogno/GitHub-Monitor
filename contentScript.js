@@ -48,10 +48,15 @@ var googleTargets = {
 	'div.kp-blk': 'Related searches',
 	'div.g': 'Special case, won\'t see this'
 };
+var bbTargets = {
+	'span.ellipsis': 'Diff expansion button',
+	'body': 'Page' // Temporary cheap hack for in-house testing
+}
 var allTargets = {
 	'github': githubTargets,
 	'stackoverflow': stackoverflowTargets,
-	'google': googleTargets
+	'google': googleTargets,
+	'bitbucket': bbTargets
 };
 
 var pageTypeRegex = {
@@ -66,7 +71,17 @@ var pageTypeRegex = {
 	'Github pull request commit': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/commits\/[0-9a-f]+$'),
 	'Github pull request files': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/files$'),
 	'Google search': new RegExp('https:\/\/www.google\.[a-z]{2,3}\/search.+'),
-	'Stack Overflow question': new RegExp('https:\/\/stackoverflow\.com\/questions\/.+$')
+	'Stack Overflow question': new RegExp('https:\/\/stackoverflow\.com\/questions\/.+$'),
+	'BitBucket main repo page': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+$'),
+	'BitBucket file browser': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/src$'),
+	'BitBucket commits': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/commits\/all$'),
+	'BitBucket commit': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/commits\/[0-9a-f]+$'),
+	'BitBucket pull requests': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/$'),
+	'BitBucket pull request overview': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/\\d+\/[^/]+\/diff$'),
+	'BitBucket pull request commits': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/\\d+\/[^/]+\/commits$'),
+	'BitBucket pull request activity': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/\\d+\/[^/]+\/activity$'),
+	'BitBucket issues': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/issues.*$'),
+	'BitBucket issue': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/issues\/\\d+\/[^/]+$')
 }
 
 /*************************************
@@ -397,42 +412,55 @@ function handleGazeLoss(timestamp) {
 
 // For when background.js requests diff info because a gaze fell on a diff
 function getDiffData(file) {
-	var filename = $(file).find('div.file-header > div.file-info > a').attr('title');
-	var diffIndex = $(file).attr('diffIndex');
-	var rows = $(file).find('div.blob-wrapper > table.diff-table > tbody > tr');
+	var filename = "Unknown filename";
+	var diffIndex = "Unknown index";
+	var rows = [];
+
+	try {
+		filename = $(file).find('div.file-header > div.file-info > a').attr('title');
+		diffIndex = $(file).attr('diffIndex');
+		rows = $(file).find('div.blob-wrapper > table.diff-table > tbody > tr');
+	} catch (e) {
+		// Ignore
+	}
 	if(rows.length < 1) {
 		return null;
 	}
 	var rowData = [];
 	rows.each(function(index) {
-		var elem = $(this);
-		var additionComponent;
-		var deletionComponent;
-		var unchangedComponent;
-		if(!isCodeLine(elem)) {
-			if(isExpandableLine(elem)) {
-				rowData.push(getTargetDescription('table > tbody > tr.js-expandable-line', elem));
-			} else if (isInlineComment(elem)) {
-				rowData.push(getTargetDescription('table > tbody > tr.inline-comments', elem));
+		try {
+			var elem = $(this);
+			var additionComponent;
+			var deletionComponent;
+			var unchangedComponent;
+			if(!isCodeLine(elem)) {
+				if(isExpandableLine(elem)) {
+					rowData.push(getTargetDescription('table > tbody > tr.js-expandable-line', elem));
+				} else if (isInlineComment(elem)) {
+					rowData.push(getTargetDescription('table > tbody > tr.inline-comments', elem));
+				} else {
+					rowData.push(getTargetDescription('table > tbody > tr', elem));
+				}
 			} else {
-				rowData.push(getTargetDescription('table > tbody > tr', elem));
+				additionComponent = diffLineDetails(elem, 'addition');
+				deletionComponent = diffLineDetails(elem, 'deletion');
+				unchangedComponent = diffLineDetails(elem, 'unchanged');
+				// In split diff, can be addition, deletion, both, or neither (unchanged)
+				// deletion must be pushed first to match unified diff
+				if(deletionComponent) {
+					rowData.push(deletionComponent);
+				}
+				if(additionComponent) {
+					rowData.push(additionComponent);
+				}
+				if(unchangedComponent) {
+					rowData.push(unchangedComponent);
+				}
 			}
-		} else {
-			additionComponent = diffLineDetails(elem, 'addition');
-			deletionComponent = diffLineDetails(elem, 'deletion');
-			unchangedComponent = diffLineDetails(elem, 'unchanged');
-			// In split diff, can be addition, deletion, both, or neither (unchanged)
-			// deletion must be pushed first to match unified diff
-			if(deletionComponent) {
-				rowData.push(deletionComponent);
-			}
-			if(additionComponent) {
-				rowData.push(additionComponent);
-			}
-			if(unchangedComponent) {
-				rowData.push(unchangedComponent);
-			}
+		} catch (e) {
+			// Don't push anything
 		}
+		
 	});
 	return {
 		'file': filename,
