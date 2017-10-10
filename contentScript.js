@@ -612,22 +612,23 @@ function expandbleLineDetail(source, elem) {
 		'file': getDiffRowFile(elem),
 		'diffIndex': diffIndex
 	};
-	var text = elem.text().trim()
+	var text = elem.text().trim();
 	var lineRegex = new RegExp('\\d+,\\d+', 'g');
-	var res = lineRegex.exec(text);
-	if(res) {
-	var lines = res[0].split(',');
-		obj['oldStart'] = parseInt(lines[0]);
-		obj['oldEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
-		lines = lineRegex.exec(text)[0].split(',');
-		obj['newStart'] = parseInt(lines[0]);
-		obj['newEnd'] = parseInt(lines[0]) + parseInt(lines[1]);
+	var res1 = lineRegex.exec(text);
+	var res2 = lineRegex.exec(text);
+	if(res1 && res2) {
+		var oldNums = res1[0].split(',');
+		obj['oldStart'] = parseInt(oldNums[0]);
+		obj['oldEnd'] = parseInt(oldNums[0]) + parseInt(oldNums[1]);
+		var newNums = res2[0].split(',');
+		obj['newStart'] = parseInt(newNums[0]);
+		obj['newEnd'] = parseInt(newNums[0]) + parseInt(newNums[1]);
 		if(!isCodeMarker(elem)) {
 			obj['codeText'] = text.substring(text.lastIndexOf('@@') + 2).trim();
 		} else {
 			obj['codeText'] = '';
 		}
-	} else { // Expandable lines at bottom of file with no info
+	} else { // Expandable lines at bottom of file with no info, or unknown format
 		obj['oldStart'] = null;
 		obj['oldEnd'] = null;
 		obj['newStart'] = null;
