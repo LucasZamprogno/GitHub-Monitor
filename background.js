@@ -240,18 +240,18 @@ function checkWindowGaze(response) {
 
 // Add on session ID and send event to the server
 function sendDataToSave(data) {
-	if(ws && ws.readyState === WebSocket.OPEN && (reporting || data.hasOwnProperty('override'))) {
+	if(!(reporting || data.hasOwnProperty('override'))) return;
+	if(saveLocation === 'remote') {
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
+		xmlhttp.setRequestHeader('Content-Type', 'application/json');
+		xmlhttp.send(JSON.stringify(data));
+	}
+	else if(ws && ws.readyState === WebSocket.OPEN) {
 		privacyFilter(data);
 		data['id'] = sessionId;
 		data = JSON.stringify(data); // Weak typiiiiiing
-		if(saveLocation === 'local') {
-			ws.send(data);
-		} else if(saveLocation === 'remote') {
-			var xmlhttp = new XMLHttpRequest();
-			xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
-			xmlhttp.setRequestHeader('Content-Type', 'application/json');
-			xmlhttp.send(data);
-		}
+		ws.send(data);
 	}
 }
 
