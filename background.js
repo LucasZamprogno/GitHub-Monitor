@@ -245,7 +245,7 @@ function sendDataToSave(data) {
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open('POST', 'http://localhost:' + SERVER_PORT + '/data');
 		xmlhttp.setRequestHeader('Content-Type', 'application/json');
-		xmlhttp.send(data);
+		xmlhttp.send(JSON.stringify(data));
 	}
 	else if(ws && ws.readyState === WebSocket.OPEN) {
 		privacyFilter(data);
