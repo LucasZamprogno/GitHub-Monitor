@@ -5,7 +5,7 @@ var GAZE_LOSS_WAIT = 100; // How often to check if the user has looked/moved awa
 var CONNECTION_WAIT = 100; // How often to try to connect to the Tobii app websocket server
 var WINDOW_TIMEOUT = 500; // How long user must be looking out of chrome before it registers as an event
 var BADGE_INTERVAL = 200;
-var PRIVCAY_DEFAULTS = ['issues', 'url', 'file', 'symbols']; // Privacy settings to be selected upon first install
+var PRIVCAY_DEFAULTS = ['issues', 'url', 'file', 'symbols', 'google']; // Privacy settings to be selected upon first install
 
 // Note: All values stored in localStorage are always stored as strings. May be converted implicitly.
 
