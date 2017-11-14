@@ -487,8 +487,7 @@ function getTargetDescription(key, elem) {
 			var data = elem.attr('data-channel');
 			var split = data.split(':');
 			var commitID = split[split.length - 1];
-			var name = $(elem).find('p.commit-title > a').attr('title');
-			return 'Commit: id - ' + commitID + ', name - ' + name;
+			return 'Commit: id - ' + commitID;
 		case 'li.js-issue-row': // Github issue in list
 			var title = $(elem).find('div > div > a.h4').text().trim();
 			var spanContent = $(elem).find('div > div > div > span.opened-by').text();
