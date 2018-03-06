@@ -309,7 +309,18 @@ function addMouseListeners() {
 function indexDiffs() {
 	$('div.file').each(function(index) {
 		$(this).attr('diffIndex', index);
+		indexLines(this);
 	});
+}
+
+function indexLines(div) {
+	var i = 0;
+	$(div).find('div.blob-wrapper > table.diff-table > tbody > tr').each(function(ignored) {
+		if(!$(this).hasClass('blob-expanded')) {
+			$(this).attr('originalindex', i);
+			i++;
+		}
+	})
 }
 
 /*************************
@@ -588,7 +599,9 @@ function diffLineDetails(elem, type) {
 	}
 	return {
 		'target': 'diffCode',
-		'index': elem.index(),
+		'isDiffLine': true,
+		'index': parseInt(elem.attr('originalindex')),
+		'indexLive': elem.index(),
 		'file': file,
 		'diffIndex': diffIndex,
 		'format': format,
@@ -607,7 +620,9 @@ function expandbleLineDetail(source, elem) {
 	var diffIndex = $(elem).closest('div.file').attr('diffIndex');
 	var obj = {
 		'target': source,
-		'index': elem.index(),
+		'isDiffLine': true,
+		'index': parseInt(elem.attr('originalindex')),
+		'indexLive': elem.index(),
 		'file': getDiffRowFile(elem),
 		'diffIndex': diffIndex
 	};
@@ -642,7 +657,9 @@ function diffCommentDetail(elem) {
 	var hashedContent = stringHash($(elem).find('div.comment-body > p').text());
 	return {
 		'target': 'Inline diff comment',
-		'index': elem.index(),
+		'isDiffLine': true,
+		'index': parseInt(elem.attr('originalindex')),
+		'indexLive': elem.index(),
 		'file': getDiffRowFile(elem),
 		'diffIndex': diffIndex,
 		'hashedContent': hashedContent
