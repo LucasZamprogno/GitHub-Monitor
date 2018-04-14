@@ -1,6 +1,6 @@
 {
   "name": "Review monitor",
-  "version": "1.2",
+  "version": "1.3",
   "version_name": "Pilot version",
   "manifest_version": 2,
   "description": "Monitors user interaction in GitHub code review",
