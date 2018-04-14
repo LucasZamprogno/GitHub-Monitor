@@ -1,6 +1,9 @@
 # GitHub-Monitor
-Name should really be something more generic.
 
+## Privacy
+
+The extension does allow configuation of what data is saved. To see what DOM elements are tracked, take a look at the target objects at the top of contentScript.js. Any with the a descriptor as the value will only save that string. All the special cases will have information recorded based on the getTargetDescription function.
+Information gathered by the content sript may be later discarded or redacted based on the privacy settings. This happens in the privacyFilter function in background.js.
 
 There are three main components to the [extension](https://developer.chrome.com/extensions/overview): The popup, the background, and the content script. The three components all communicate with each other via [message passing](https://developer.chrome.com/extensions/messaging).
 
