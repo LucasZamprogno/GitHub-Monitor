@@ -2,9 +2,11 @@
 
 ## Privacy
 
-The extension does allow configuation of what data is saved. To see what DOM elements are tracked, take a look at the target objects at the top of contentScript.js. Any with a descriptor as the value will only save that string. All the special cases will have information recorded based on the getTargetDescription function.
+The only domains on which the tracker will record any specific information are GitHub, Google, and StackOverflow. On all other pages, the only thing that can be recorded is the domain name. Within those three specific domains, gazes and interaction with certain elements, for example a line of code, will record details about the element being looked at. For these specific elements there are privacy options to remove or obfuscate the content saved.
 
-Information gathered by the content sript may be later discarded or redacted based on the privacy settings. This happens in the privacyFilter function in background.js.
+To see which DOM elements are tracked, take a look at the target objects at the top of contentScript.js. Any with a descriptor as the value will only save that string. All the special cases will have information recorded based on its case in the getTargetDescription function.
+
+Information gathered by the content sript may be later discarded or obfuscated based on the privacy settings. This happens in the privacyFilter function in background.js.
 
 ## Components
 
