@@ -48,15 +48,10 @@ var googleTargets = {
 	'div.kp-blk': 'Related searches',
 	'div.g': 'Special case, won\'t see this'
 };
-var bbTargets = {
-	'span.ellipsis': 'Diff expansion button',
-	'body': 'Page' // Temporary cheap hack for in-house testing
-}
 var allTargets = {
 	'github': githubTargets,
 	'stackoverflow': stackoverflowTargets,
-	'google': googleTargets,
-	'bitbucket': bbTargets
+	'google': googleTargets
 };
 
 var pageTypeRegex = {
@@ -71,17 +66,7 @@ var pageTypeRegex = {
 	'Github pull request commit': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/commits\/[0-9a-f]+$'),
 	'Github pull request files': new RegExp('https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\\d+\/files$'),
 	'Google search': new RegExp('https:\/\/www.google\.[a-z]{2,3}\/search.+'),
-	'Stack Overflow question': new RegExp('https:\/\/stackoverflow\.com\/questions\/.+$'),
-	'BitBucket main repo page': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+$'),
-	'BitBucket file browser': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/src$'),
-	'BitBucket commits': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/commits\/all$'),
-	'BitBucket commit': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/commits\/[0-9a-f]+$'),
-	'BitBucket pull requests': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/$'),
-	'BitBucket pull request overview': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/\\d+\/[^/]+\/diff$'),
-	'BitBucket pull request commits': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/\\d+\/[^/]+\/commits$'),
-	'BitBucket pull request activity': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/pull-requests\/\\d+\/[^/]+\/activity$'),
-	'BitBucket issues': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/issues.*$'),
-	'BitBucket issue': new RegExp('https:\/\/bitbucket\.org\/[^/]+\/[^/]+\/issues\/\\d+\/[^/]+$')
+	'Stack Overflow question': new RegExp('https:\/\/stackoverflow\.com\/questions\/.+$')
 }
 
 /*************************************
@@ -877,119 +862,3 @@ function stringHash(string) {
 	}
 	return hash;
 }
-
-
-
-
-/** Old bitbucket code, probably never going to be used
-
-var bitbucketTargets = {
-	'div.fbnKxr': 'Navigation menu',
-	// Overview
-	'div#repo-metadata': 'Main repo information',
-	'div#repo-stats': 'Main repo information',
-	'div.readme': 'README',
-	'div#repo-activity': 'Repo activity',
-	// Source
-	'div#inline-dialog-branch-dialog': 'Branch list',
-	'table#source-list': 'File browser', // File/folder
-	'article.readme': 'README',
-	// Commits
-	'table.commit-list > tbody > tr': 'Special case, won\'t see this', // Commit
-	'div.udiff-line': 'Special case, won\'t see this', // Code
-	'div.ellipsis': 'Hidden code expansion button',
-	// Branches
-	'table.branches-list > tbody > tr.iterable-item': 'Special case, won\'t see this', // Branch
-	// Pull requests
-	'div#pull-requests-filter-bar': 'Pull request filters',
-	'tr.pull-request-row': 'Special case, won\'t see this', // Pull request
-	// Specific pull request
-	'div.compare-widget-container': 'Pull request branch details',
-	'div#pullrequest-actions': 'Pull request actions',
-	'header#pull-request-diff-header': 'Pull request information',
-	// Issues
-	'div.filter-container': 'Issue filters',
-	'div.issues-toolbar-right': 'Issue filters',
-	'table.issues-list > tbody > tr': 'Special case, won\'t see this', // Issue
-	// Specific issue
-	'div#issue-main-content': 'Issue content',
-	'li.comment': 'Comment',
-	'li.new-comment': 'New comment field',
-	'div.issue-attrs': 'Issue details',
-}
-
-From var allTargets:
-	'bitbucket': bitbucketTargets
-
-From addMouseHandlers (bottom):
-
-	var files = $('div.diff-container');
-	for(var item of files) {
-		item.addEventListener('mouseenter', bitbucketFileMouseEventHandler);
-		item.addEventListener('mouseleave', bitbucketFileMouseEventHandler);
-	}
-
-// Handles the mouseenter/leave events for files since they aren't in the normal list
-function bitbucketFileMouseEventHandler(event, target) {
-	var obj = eventInteractionObject(event.type, getTargetDescription('div.diff-container', event.target));
-	chrome.runtime.sendMessage(obj);
-}
-
-// Get the specifics of a line of code (line numbers, code text)
-function bitbucketLineDetails(elem) {
-	var type;
-	var fileString = getTargetDescription('div.diff-container', elem.closest('div.diff-container')); // Format 'File: filename.ext'
-	var file = fileString.substring(6) // Cut out 'File: '
-	var oldLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-fnum');
-	var newLineNum = $(elem).find('div.gutter > a.line-numbers')[0].getAttribute('data-tnum');
-	var codeText = $(elem).find('pre.source').text().trim();
-	if(elem.hasClass('common')) {
-		type = 'unchanged';
-		codeText = codeText.trim();
-	} else if(elem.hasClass('addition')) {
-		type = 'addition';
-		codeText = codeText.substring(1).trim();
-	} else if(elem.hasClass('deletion')) {
-		type = 'deletion';
-		codeText = codeText.substring(1).trim();
-	} else { // Hopefully shouldn't happen
-		type = 'unknown';
-		codeText = null;
-	}
-	return {
-		'file': file,
-		'change': type,
-		'oldLineNum': oldLineNum,
-		'newLineNum': newLineNum,
-		'codeText': codeText
-	};
-}
-
-From getTargetDescription:
-		case 'div.diff-container': // Bitbucket diff file
-			var header = $(elem).find('div.heading > div.primary > h1.filename');
-			header = $(header).contents().filter(function() { // Ignore <span>s
-				return this.nodeType == 3;
-			}).text().trim();
-			return 'File: ' + header;
-		case 'table.commit-list > tbody > tr': // Bitbucket commits
-			var idSplit = $(elem).find('td.hash > div > a').attr('href').split('/');
-			var commitID = idSplit[idSplit.length - 1].trim();
-			var name = $(elem).find('td.text > div > div > span.subject').text().trim();
-			return 'Commit: id - ' + commitID + ', name - ' + name;
-		case 'div.udiff-line': // Bitbucket code
-			return bitbucketLineDetails(elem);
-		case 'table.branches-list > tbody > tr.iterable-item': // Bitbucket branch from list
-			return 'Branch ' + $(elem).find('td.branch-header > a').text().trim();
-		case 'tr.pull-request-row': // Bitbucket pull request
-			return 'Pull request: ' + $(elem).find('td.title > div > a').text().trim();
-		case 'table.issues-list > tbody > tr': // Bitpucket issue
-			return 'Issue: ' + $(elem).find('td.text > div > div > a').text().trim();
-
-*/
-/** Old github targets
-	'div.header': 'Main github header',
-	'div.repohead': 'Repo header',
-	'div.branch-select-menu > div.select-menu-modal-holder': 'Branch selection menu',
-	'div.overall-summary': 'Landing page repo header (Commits, branches, etc.)'
-*/
