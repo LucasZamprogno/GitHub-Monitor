@@ -1,5 +1,9 @@
 # GitHub-Monitor
 
+## Meta comments
+
+This was the main component of the code review eye tracking study. Boy I wish I structured this better, this was a bad case of "I'm the only one working on this" and "just one quick change". Still very fun working with eye tracking data.
+
 ## Privacy
 
 The only domains on which the tracker will record any specific information are GitHub, Google, and StackOverflow. On all other pages, the only thing that can be recorded is the domain name. Within those three specific domains, gazes and interaction with certain elements, for example a line of code, will record details about the element being looked at. For these specific elements there are privacy options to remove or obfuscate the content saved.
