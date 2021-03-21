@@ -27,7 +27,7 @@ The [content script](https://developer.chrome.com/extensions/content_scripts) is
 
 The paper writeup at the end of the reasearch project can be found [here](./Results/448-Paper.pdf). 
 
-Below are two figures showing different gaze patterns observed using the tool. These should be read as a left-to-right timeline, with blue dots/lines representing gaze events. Gaps are when the user is looking away from the screen or on another tab.
+Below are two figures showing different gaze patterns observed using the tool. These should be read as a left-to-right timeline, with blue dots/lines representing gaze events. Gaps are when the user is looking away from the screen or on another tab. The tight interleaving of the additions and deletions in the second image is an attempt to represent the split (side by side) view of the diff in a one dimensional fashion.
 
 ![Gaze 1](./Results/S1-wide.png)
 
